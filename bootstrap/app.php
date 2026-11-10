@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RedirectClientFromPanel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
@@ -27,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'permission' => EnsureUserHasPermission::class,
+            'redirect-client' => RedirectClientFromPanel::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

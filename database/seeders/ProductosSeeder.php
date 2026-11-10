@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Categoria;
 use App\Models\Color;
 use App\Models\Marca;
-use App\Models\Modelo;
 use App\Models\Talla;
 use Illuminate\Database\Seeder;
 
@@ -15,44 +14,21 @@ class ProductosSeeder extends Seeder
     {
         foreach ([
             'Poleras', 'Camisas', 'Blusas', 'Jeans', 'Pantalones',
-            'Shorts', 'Vestidos', 'Faldas', 'Chaquetas', 'Abrigos',
+            'Shorts', 'Vestidos', 'Faldas', 'Chompas',
             'Sudaderas', 'Ropa deportiva', 'Ropa interior', 'Accesorios',
         ] as $nombre) {
             Categoria::create(['nombre' => $nombre]);
         }
 
         $marcas = [
-            'Emma Fashion' => ['Exclusive', 'Básico', 'Premium', 'Trend', 'Classic'],
-            'Scraper' => ['Urban', 'Street', 'Oversize', 'Basic', 'Casual'],
-            'Tattoo' => ['Classic', 'Premium', 'Slim Fit', 'Comfort', 'Fashion'],
-            'Galaxy' => ['Galaxy Sport', 'Galaxy Trend', 'Galaxy Urban', 'Galaxy Premium', 'Galaxy Elegant'],
-            'Adidas' => ['Originals', 'Performance', 'Essentials', 'Sportswear'],
-            'Nike' => ['Air', 'Dri-FIT', 'Club', 'Sportswear'],
-            'Puma' => ['Classic', 'Sport', 'Essentials', 'Active'],
-            'Zara' => ['Casual', 'Elegant', 'Office', 'Summer Collection'],
-            'H&M' => ['Casual', 'Modern', 'Basic', 'Street'],
-            "Levi's" => ['Original', 'Classic', 'Modern', 'Premium'],
-            'Guess' => ['Classic', 'Premium', 'Trendy', 'Night'],
-            'Tommy Hilfiger' => ['Classic', 'Sport', 'Premium', 'Essential'],
-            'Calvin Klein' => ['Classic', 'Modern', 'Sport', 'Premium'],
-            'American Eagle' => ['Classic', 'Casual', 'Street', 'Denim'],
-            'Forever 21' => ['Trend', 'Basic', 'Casual', 'Party'],
-            'Bershka' => ['Urban', 'Street', 'Basic', 'Trend'],
-            'Pull&Bear' => ['Casual', 'Street', 'Basic', 'Summer'],
-            'Shein' => ['Trend', 'Basic', 'Elegant', 'Party'],
-            'New Balance' => ['Classic', 'Sport', 'Essentials', 'Active'],
-            'Reebok' => ['Classic', 'Sport', 'Essentials', 'Fitness'],
+            'Emma Fashion', 'Scraper', 'Tattoo', 'Galaxy', 'Adidas',
+            'Nike', 'Puma', 'Zara', 'H&M', "Levi's",
+            'Guess', 'Tommy Hilfiger', 'Calvin Klein', 'American Eagle', 'Forever 21',
+            'Bershka', 'Pull&Bear', 'Shein', 'New Balance', 'Reebok',
         ];
 
-        foreach ($marcas as $marcaNombre => $modelos) {
-            $marca = Marca::create(['nombre' => $marcaNombre]);
-
-            foreach ($modelos as $modeloNombre) {
-                Modelo::create([
-                    'marca_id' => $marca->id,
-                    'nombre' => $modeloNombre,
-                ]);
-            }
+        foreach ($marcas as $marcaNombre) {
+            Marca::create(['nombre' => $marcaNombre]);
         }
 
         foreach (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Talla Única'] as $nombre) {

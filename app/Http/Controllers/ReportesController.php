@@ -8,7 +8,6 @@ use App\Models\Proveedor;
 use App\Models\User;
 use App\Models\Venta;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -22,7 +21,7 @@ class ReportesController extends Controller
 
         return Inertia::render('Reportes/compras', [
             'reporte' => $compras,
-            'proveedores' => Proveedor::select('id', 'nombre')->orderBy('nombre')->get(),
+            'proveedores' => Proveedor::withTrashed()->select('id', 'nombre')->orderBy('nombre')->get(),
             'categorias' => Categoria::select('id', 'nombre')->orderBy('nombre')->get(),
             'filtros' => $request->only(['fecha_inicio', 'fecha_fin', 'proveedor_id', 'categoria_id']),
         ]);
@@ -34,7 +33,9 @@ class ReportesController extends Controller
 
         return Inertia::render('Reportes/ventas', [
             'reporte' => $ventas,
-            'usuarios' => User::select('id', 'name', 'nombres', 'apellido_paterno', 'apellido_materno')->orderBy('name')->get(),
+            'usuarios' => $request->user()->isAdmin()
+                ? User::select('id', 'name', 'nombres', 'apellido_paterno', 'apellido_materno')->orderBy('name')->get()
+                : [],
             'categorias' => Categoria::select('id', 'nombre')->orderBy('nombre')->get(),
             'filtros' => $request->only(['fecha_inicio', 'fecha_fin', 'user_id', 'categoria_id']),
         ]);
@@ -52,7 +53,9 @@ class ReportesController extends Controller
             'rangoFechas' => $this->getRangoFechas($request),
         ])->setPaper('letter', 'landscape');
 
-        return $pdf->download('reporte_compras_'.now()->format('Y-m-d').'.pdf');
+        $filename = 'reporte_compras_'.now()->format('Y-m-d_H-i-s').'.pdf';
+
+        return $request->boolean('download') ? $pdf->download($filename) : $pdf->stream($filename);
     }
 
     public function ventasPdf(Request $request): \Symfony\Component\HttpFoundation\Response
@@ -67,13 +70,35 @@ class ReportesController extends Controller
             'rangoFechas' => $this->getRangoFechas($request),
         ])->setPaper('letter', 'landscape');
 
-        return $pdf->download('reporte_ventas_'.now()->format('Y-m-d').'.pdf');
+        $filename = 'reporte_ventas_'.now()->format('Y-m-d_H-i-s').'.pdf';
+
+        return $request->boolean('download') ? $pdf->download($filename) : $pdf->stream($filename);
+    }
+
+    public function comprasVistaPdf(Request $request): Response
+    {
+        return $this->pdfPreview($request, 'Reporte Detallado de Compras', 'reportes.compras.pdf', 'reportes.compras', 'reporte_compras');
+    }
+
+    public function ventasVistaPdf(Request $request): Response
+    {
+        return $this->pdfPreview($request, 'Reporte Detallado de Ventas', 'reportes.ventas.pdf', 'reportes.ventas', 'reporte_ventas');
     }
 
     private function getComprasData(Request $request): array
     {
         $query = Compra::query()
-            ->with(['proveedor:id,nombre', 'detalles.productoRelacion.categoria:id,nombre', 'detalles.productoRelacion.marca:id,nombre', 'detalles.productoRelacion.modelo:id,nombre']);
+            ->with([
+                'proveedor:id,nombre',
+                'detalles' => function ($q) {
+                    $q->with([
+                        'productoRelacion.categoria:id,nombre',
+                        'productoRelacion.marca:id,nombre',
+                        'productoRelacion.inventario:id,producto_id,stock_actual',
+                    ]);
+                },
+            ])
+            ->where('estado', 'completada');
 
         if ($request->fecha_inicio) {
             $query->where('fecha', '>=', $request->fecha_inicio);
@@ -96,21 +121,44 @@ class ReportesController extends Controller
         foreach ($compras as $compra) {
             foreach ($compra->detalles as $detalle) {
                 $producto = $detalle->productoRelacion;
+
                 $detalles[] = [
                     'compra_id' => $compra->id,
                     'numero_compra' => $compra->numero_compra,
                     'fecha' => $compra->fecha,
                     'proveedor' => $compra->proveedor->nombre ?? '---',
-                    'categoria' => $producto?->categoria->nombre ?? '---',
-                    'marca' => $producto?->marca->nombre ?? '---',
-                    'modelo' => $producto?->modelo->nombre ?? '---',
+                    'categoria' => $producto?->categoria?->nombre ?? '---',
+                    'marca' => $producto?->marca?->nombre ?? '---',
+                    'genero' => $producto?->genero ?? '---',
                     'descripcion' => $detalle->producto,
                     'cantidad' => $detalle->cantidad,
                     'precio_unitario' => $detalle->precio_unitario,
                     'subtotal' => $detalle->subtotal,
+                    'stock' => $producto?->inventario?->stock_actual ?? 0,
                 ];
             }
         }
+
+        $resumenProducto = collect($detalles)
+            ->groupBy('descripcion')
+            ->map(function ($items, $descripcion) {
+                $cantidad = $items->sum('cantidad');
+                $subtotal = $items->sum('subtotal');
+
+                return [
+                    'descripcion' => $descripcion,
+                    'categoria' => $items->first()['categoria'],
+                    'marca' => $items->first()['marca'],
+                    'genero' => $items->first()['genero'],
+                    'cantidad' => $cantidad,
+                    'stock' => $items->first()['stock'],
+                    'precio_unitario' => $cantidad > 0 ? round($subtotal / $cantidad, 2) : 0,
+                    'subtotal' => $subtotal,
+                ];
+            })
+            ->sortByDesc('subtotal')
+            ->values()
+            ->toArray();
 
         $resumenProveedor = collect($detalles)
             ->groupBy('proveedor')
@@ -127,6 +175,7 @@ class ReportesController extends Controller
 
         return [
             'detalles' => $detalles,
+            'resumen_producto' => $resumenProducto,
             'resumen_proveedor' => $resumenProveedor,
             'total_compras' => $compras->count(),
             'total_productos' => collect($detalles)->sum('cantidad'),
@@ -137,8 +186,21 @@ class ReportesController extends Controller
     private function getVentasData(Request $request): array
     {
         $query = Venta::query()
-            ->with(['cliente:id,nombre,apellido', 'detalles.productoRelacion.categoria:id,nombre', 'detalles.productoRelacion.marca:id,nombre', 'detalles.productoRelacion.modelo:id,nombre'])
+            ->with([
+                'cliente:id,nombre,apellido',
+                'detalles' => function ($q) {
+                    $q->with([
+                        'productoRelacion.categoria:id,nombre',
+                        'productoRelacion.marca:id,nombre',
+                        'productoRelacion.inventario:id,producto_id,stock_actual',
+                    ]);
+                },
+            ])
             ->where('estado', 'completada');
+
+        if (! $request->user()->isAdmin()) {
+            $query->where('user_id', $request->user()->id);
+        }
 
         if ($request->fecha_inicio) {
             $query->where('fecha', '>=', $request->fecha_inicio);
@@ -146,7 +208,7 @@ class ReportesController extends Controller
         if ($request->fecha_fin) {
             $query->where('fecha', '<=', $request->fecha_fin);
         }
-        if ($request->user_id) {
+        if ($request->user()->isAdmin() && $request->user_id) {
             $query->where('user_id', $request->user_id);
         }
         if ($request->categoria_id) {
@@ -161,22 +223,47 @@ class ReportesController extends Controller
         foreach ($ventas as $venta) {
             foreach ($venta->detalles as $detalle) {
                 $producto = $detalle->productoRelacion;
-                $clienteNombre = $venta->cliente ? trim($venta->cliente->nombre.' '.($venta->cliente->apellido ?? '')) : '---';
+                $clienteNombre = $venta->cliente
+                    ? trim($venta->cliente->nombre.' '.($venta->cliente->apellido ?? ''))
+                    : '---';
+
                 $detalles[] = [
                     'venta_id' => $venta->id,
                     'numero_venta' => $venta->numero_venta,
                     'fecha' => $venta->fecha,
                     'cliente' => $clienteNombre,
-                    'categoria' => $producto?->categoria->nombre ?? '---',
-                    'marca' => $producto?->marca->nombre ?? '---',
-                    'modelo' => $producto?->modelo->nombre ?? '---',
+                    'categoria' => $producto?->categoria?->nombre ?? '---',
+                    'marca' => $producto?->marca?->nombre ?? '---',
+                    'genero' => $producto?->genero ?? '---',
                     'descripcion' => $detalle->producto,
                     'cantidad' => $detalle->cantidad,
                     'precio_unitario' => $detalle->precio_unitario,
                     'subtotal' => $detalle->subtotal,
+                    'stock' => $producto?->inventario?->stock_actual ?? 0,
                 ];
             }
         }
+
+        $resumenProducto = collect($detalles)
+            ->groupBy('descripcion')
+            ->map(function ($items, $descripcion) {
+                $cantidad = $items->sum('cantidad');
+                $subtotal = $items->sum('subtotal');
+
+                return [
+                    'descripcion' => $descripcion,
+                    'categoria' => $items->first()['categoria'],
+                    'marca' => $items->first()['marca'],
+                    'genero' => $items->first()['genero'],
+                    'cantidad' => $cantidad,
+                    'stock' => $items->first()['stock'],
+                    'precio_unitario' => $cantidad > 0 ? round($subtotal / $cantidad, 2) : 0,
+                    'subtotal' => $subtotal,
+                ];
+            })
+            ->sortByDesc('subtotal')
+            ->values()
+            ->toArray();
 
         $resumenCliente = collect($detalles)
             ->groupBy('cliente')
@@ -193,6 +280,7 @@ class ReportesController extends Controller
 
         return [
             'detalles' => $detalles,
+            'resumen_producto' => $resumenProducto,
             'resumen_cliente' => $resumenCliente,
             'total_ventas' => $ventas->count(),
             'total_productos' => collect($detalles)->sum('cantidad'),
@@ -206,5 +294,18 @@ class ReportesController extends Controller
         $fin = $request->fecha_fin ? now()->parse($request->fecha_fin)->format('d/m/Y') : 'Fin';
 
         return "{$inicio} - {$fin}";
+    }
+
+    private function pdfPreview(Request $request, string $titulo, string $pdfRoute, string $returnRoute, string $filenamePrefix): Response
+    {
+        $filters = $request->only(['fecha_inicio', 'fecha_fin', 'proveedor_id', 'user_id', 'categoria_id']);
+
+        return Inertia::render('Reportes/pdf-viewer', [
+            'titulo' => $titulo,
+            'pdfUrl' => route($pdfRoute, $filters),
+            'downloadUrl' => route($pdfRoute, [...$filters, 'download' => 1]),
+            'returnUrl' => route($returnRoute, $filters),
+            'filename' => $filenamePrefix.'_'.now()->format('Y-m-d_H-i-s').'.pdf',
+        ]);
     }
 }

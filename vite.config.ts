@@ -7,6 +7,20 @@ import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+    server: {
+        host: '0.0.0.0',
+        origin: 'http://localhost:5173',
+        port: 5173,
+        strictPort: true,
+        cors: {
+            origin: [
+                'http://localhost:8000',
+                'http://127.0.0.1:8000',
+                'http://192.168.1.36:8000',
+                /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:8000$/,
+            ],
+        },
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],

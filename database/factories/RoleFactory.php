@@ -28,11 +28,19 @@ class RoleFactory extends Factory
         ]);
     }
 
-    public function cajera(): static
+    public function vendedor(): static
     {
         return $this->state(fn (array $attributes) => [
-            'nombre' => Role::CAJERA,
-            'descripcion' => 'Cajera',
+            'nombre' => Role::VENDEDOR,
+            'descripcion' => 'Vendedor',
+        ]);
+    }
+
+    public function encargadoInventario(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'nombre' => Role::ENCARGADO_INVENTARIO,
+            'descripcion' => 'Encargado de inventario',
         ]);
     }
 }

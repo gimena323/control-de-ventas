@@ -1,16 +1,16 @@
-<script setup lang="ts">
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-</script>
-
 <template>
-    <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-    >
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
-    </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold"
-            >Laravel Starter Kit</span
+    <img
+        src="/images/icono-emma-fashion-ef.png"
+        alt="Ícono de Emma Fashion"
+        class="size-10 rounded-xl object-cover shadow-lg shadow-pink-300/40"
+    />
+    <div class="ml-2 grid flex-1 text-left">
+        <span class="truncate text-sm leading-tight font-bold text-[#C2185B]"
+            >Emma Fashion</span
+        >
+        <span
+            class="truncate text-[11px] font-medium tracking-wide text-[#5D4037]/70"
+            >Sistema de Control</span
         >
     </div>
 </template>

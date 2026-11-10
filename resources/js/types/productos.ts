@@ -12,15 +12,6 @@ export type Marca = {
     updated_at: string;
 };
 
-export type Modelo = {
-    id: number;
-    marca_id: number;
-    nombre: string;
-    created_at: string;
-    updated_at: string;
-    marca?: Marca;
-};
-
 export type Talla = {
     id: number;
     nombre: string;
@@ -49,11 +40,18 @@ export type ProductoVariante = {
     updated_at: string;
 };
 
+export type ProductoImagen = {
+    id: number;
+    producto_id: number;
+    color_id: number | null;
+    ruta: string;
+    orden: number;
+};
+
 export type Producto = {
     id: number;
     categoria_id: number;
     marca_id: number;
-    modelo_id: number;
     talla_id: number;
     color_id: number;
     nombre: string;
@@ -61,12 +59,13 @@ export type Producto = {
     precio_venta: string;
     imagen: string | null;
     estado?: string;
+    genero?: string;
     created_at: string;
     updated_at: string;
     categoria?: Categoria;
     marca?: Marca;
-    modelo?: Modelo;
     talla?: Talla;
     color?: Color;
     variantes?: ProductoVariante[];
+    imagenes?: ProductoImagen[];
 };

@@ -16,6 +16,8 @@ onMounted(() => {
 
 <template>
     <div class="flex h-full items-center justify-center">
-        <p class="text-muted-foreground text-sm">Redirigiendo a Reportes de Compras...</p>
+        <p class="text-sm text-muted-foreground">
+            Redirigiendo a Reportes de Compras...
+        </p>
     </div>
 </template>

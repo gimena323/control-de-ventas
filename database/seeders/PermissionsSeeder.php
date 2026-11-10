@@ -15,7 +15,7 @@ class PermissionsSeeder extends Seeder
 
         Permission::whereNotIn('nombre', $currentNames)->delete();
 
-        Role::whereNotIn('nombre', [Role::ADMIN, Role::VENDEDOR, Role::ENCARGADO_INVENTARIO])->each(function (Role $role) {
+        Role::whereNotIn('nombre', [Role::ADMIN, Role::VENDEDOR, Role::ENCARGADO_INVENTARIO, Role::CLIENTE])->each(function (Role $role) {
             $role->permissions()->detach();
             $role->users()->detach();
             $role->delete();
@@ -48,5 +48,10 @@ class PermissionsSeeder extends Seeder
             ['descripcion' => 'Encargado de inventario, compras y proveedores']
         );
         $encargadoInventario->syncPermissionsByName(PermissionEnum::valuesForEncargadoInventario());
+
+        Role::firstOrCreate(
+            ['nombre' => Role::CLIENTE],
+            ['descripcion' => 'Cliente de la tienda online']
+        );
     }
 }

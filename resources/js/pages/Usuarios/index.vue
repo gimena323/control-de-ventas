@@ -9,7 +9,7 @@ import {
     User as UserIcon,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import Heading from '@/components/Heading.vue';
+import ManagementHero from '@/components/ManagementHero.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,6 @@ type UserItem = {
     fecha_ingreso: string | null;
     fecha_fin: string | null;
     email: string;
-    email_verified_at: string | null;
     status: string;
     created_at: string;
     roles: { id: number; nombre: string }[];
@@ -203,21 +202,25 @@ function userRoleBadge(roleName: string): string {
 <template>
     <Head title="Gestión de Usuarios" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-        <div class="flex items-center justify-between">
-            <Heading
-                title="Usuarios"
-                description="Administra los usuarios del sistema y asigna roles."
-            />
+    <div
+        class="flex h-full flex-1 flex-col gap-5 rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-pink-100 p-4"
+    >
+        <ManagementHero
+            title="Usuarios"
+            description="Administra los usuarios del sistema y asigna roles."
+        >
+            <template #icon><User class="h-7 w-7" /></template>
             <Button v-if="can('usuarios.gestion')" @click="openCreateDialog">
                 <Plus class="mr-2 h-4 w-4" />
                 Nuevo Usuario
             </Button>
-        </div>
+        </ManagementHero>
 
-        <div class="relative max-w-sm">
+        <div
+            class="relative max-w-xl rounded-xl border border-fuchsia-200 bg-gradient-to-r from-pink-100/95 via-fuchsia-50 to-violet-100/95 p-4 shadow-md"
+        >
             <Search
-                class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                class="absolute top-1/2 left-7 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             />
             <Input
                 v-model="search"
@@ -226,14 +229,17 @@ function userRoleBadge(roleName: string): string {
             />
         </div>
 
-        <div class="overflow-hidden rounded-xl border">
+        <div
+            class="overflow-hidden rounded-2xl border border-fuchsia-200 bg-gradient-to-br from-pink-100/95 via-fuchsia-50/95 to-violet-100/95 shadow-xl shadow-violet-300/40"
+        >
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b bg-muted/50 text-left">
+                    <tr
+                        class="border-b border-violet-200 bg-gradient-to-r from-violet-200 via-pink-100 to-fuchsia-200 text-left"
+                    >
                         <th class="px-4 py-3 font-medium">Usuario</th>
                         <th class="px-4 py-3 font-medium">Email</th>
                         <th class="px-4 py-3 font-medium">Rol</th>
-                        <th class="px-4 py-3 font-medium">Verificado</th>
                         <th class="px-4 py-3 font-medium">Estado</th>
                         <th class="px-4 py-3 text-right font-medium">
                             Acciones
@@ -274,18 +280,7 @@ function userRoleBadge(roleName: string): string {
                                 >—</span
                             >
                         </td>
-                        <td class="px-4 py-3">
-                            <Badge
-                                :variant="
-                                    user.email_verified_at
-                                        ? 'default'
-                                        : 'secondary'
-                                "
-                                class="text-xs"
-                            >
-                                {{ user.email_verified_at ? 'Sí' : 'No' }}
-                            </Badge>
-                        </td>
+
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <button
@@ -351,7 +346,7 @@ function userRoleBadge(roleName: string): string {
                     </tr>
                     <tr v-if="users.data.length === 0">
                         <td
-                            colspan="6"
+                            colspan="5"
                             class="py-12 text-center text-sm text-muted-foreground"
                         >
                             <UserIcon class="mx-auto mb-2 h-8 w-8 opacity-40" />
@@ -398,13 +393,16 @@ function userRoleBadge(roleName: string): string {
     </div>
 
     <Dialog v-model:open="formDialogOpen">
-        <DialogContent class="flex flex-col sm:max-w-[1000px] max-h-[90vh]">
+        <DialogContent class="flex max-h-[90vh] flex-col sm:max-w-[1000px]">
             <DialogHeader class="shrink-0">
                 <DialogTitle>{{ dialogTitle }}</DialogTitle>
                 <DialogDescription>{{ dialogDescription }}</DialogDescription>
             </DialogHeader>
-            <form @submit.prevent="submitSave" class="flex flex-col overflow-hidden">
-                <div class="overflow-y-auto flex-1 -mx-6 px-6 py-4">
+            <form
+                @submit.prevent="submitSave"
+                class="flex flex-col overflow-hidden"
+            >
+                <div class="-mx-6 flex-1 overflow-y-auto px-6 py-4">
                     <div class="grid gap-6">
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div class="grid gap-2">
@@ -417,22 +415,30 @@ function userRoleBadge(roleName: string): string {
                                 <InputError :message="form.errors.nombres" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="apellido_paterno">Apellido paterno *</Label>
+                                <Label for="apellido_paterno"
+                                    >Apellido paterno *</Label
+                                >
                                 <Input
                                     id="apellido_paterno"
                                     v-model="form.apellido_paterno"
                                     placeholder="Apellido paterno"
                                 />
-                                <InputError :message="form.errors.apellido_paterno" />
+                                <InputError
+                                    :message="form.errors.apellido_paterno"
+                                />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="apellido_materno">Apellido materno *</Label>
+                                <Label for="apellido_materno"
+                                    >Apellido materno *</Label
+                                >
                                 <Input
                                     id="apellido_materno"
                                     v-model="form.apellido_materno"
                                     placeholder="Apellido materno"
                                 />
-                                <InputError :message="form.errors.apellido_materno" />
+                                <InputError
+                                    :message="form.errors.apellido_materno"
+                                />
                             </div>
                         </div>
 
@@ -447,20 +453,16 @@ function userRoleBadge(roleName: string): string {
                                 <InputError :message="form.errors.telefono" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="fecha_ingreso">Fecha de ingreso</Label>
+                                <Label for="fecha_ingreso"
+                                    >Fecha de ingreso</Label
+                                >
                                 <DatePickerInput
                                     id="fecha_ingreso"
                                     v-model="form.fecha_ingreso"
                                 />
-                                <InputError :message="form.errors.fecha_ingreso" />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="fecha_fin">Fecha de fin</Label>
-                                <DatePickerInput
-                                    id="fecha_fin"
-                                    v-model="form.fecha_fin"
+                                <InputError
+                                    :message="form.errors.fecha_ingreso"
                                 />
-                                <InputError :message="form.errors.fecha_fin" />
                             </div>
                         </div>
 
@@ -511,19 +513,23 @@ function userRoleBadge(roleName: string): string {
                         </div>
 
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-                            <div class="grid gap-2">
+                            <div class="grid gap-2 md:col-span-2">
                                 <Label for="role">Rol *</Label>
                                 <Select v-model="form.role">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar rol" />
+                                    <SelectTrigger class="w-full">
+                                        <SelectValue
+                                            placeholder="Seleccionar rol"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
                                             v-for="r in roles"
                                             :key="r.id"
                                             :value="r.nombre"
+                                            :text-value="r.nombre"
                                         >
-                                            {{ r.nombre }} — {{ r.descripcion ?? '' }}
+                                            {{ r.nombre }} —
+                                            {{ r.descripcion ?? '' }}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -557,19 +563,30 @@ function userRoleBadge(roleName: string): string {
                                             ]"
                                         />
                                     </button>
-                                    <Label class="cursor-pointer font-medium" @click="form.status = form.status === 'activo' ? 'desactivado' : 'activo'">
+                                    <Label
+                                        class="cursor-pointer font-medium"
+                                        @click="
+                                            form.status =
+                                                form.status === 'activo'
+                                                    ? 'desactivado'
+                                                    : 'activo'
+                                        "
+                                    >
                                         Cuenta activa
                                     </Label>
                                 </div>
                                 <p class="text-xs text-muted-foreground">
-                                    Si está desactivada el usuario no podrá iniciar sesión.
+                                    Si está desactivada el usuario no podrá
+                                    iniciar sesión.
                                 </p>
                                 <InputError :message="form.errors.status" />
                             </div>
                         </div>
                     </div>
                 </div>
-                <DialogFooter class="shrink-0 border-t border-pink-100 pt-4 px-0">
+                <DialogFooter
+                    class="shrink-0 border-t border-pink-100 px-0 pt-4"
+                >
                     <DialogClose as-child>
                         <Button type="button" variant="outline"
                             >Cancelar</Button

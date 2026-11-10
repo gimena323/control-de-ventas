@@ -3,6 +3,7 @@
 namespace App\Http\Responses;
 
 use App\Enums\Permission;
+use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +19,7 @@ class LoginResponse implements LoginResponseContract
         $user->loadMissing('roles.permissions');
 
         $redirectTo = match (true) {
+            $user->hasRole(Role::CLIENTE) => '/catalogo',
             $user->hasPermission(Permission::PanelVer->value) => route('dashboard'),
             $user->hasPermission(Permission::ClientesVer->value) => '/clientes',
             default => '/',

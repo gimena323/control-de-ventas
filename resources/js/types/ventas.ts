@@ -2,7 +2,10 @@ export type VentaDetalle = {
     id: number;
     venta_id: number;
     producto_id: number | null;
+    producto_variante_id: number | null;
     producto: string;
+    talla: string | null;
+    color: string | null;
     cantidad: number;
     precio_unitario: string | number;
     descuento: string | number;
@@ -10,6 +13,11 @@ export type VentaDetalle = {
     producto_relacion?: {
         id: number;
         nombre: string;
+    } | null;
+    variante?: {
+        id: number;
+        talla?: { id: number; nombre: string } | null;
+        color?: { id: number; nombre: string; codigo_hex?: string } | null;
     } | null;
 };
 
@@ -19,6 +27,7 @@ export type Venta = {
     user_id: number;
     numero_venta: string;
     total: string | number;
+    ganancia: string | number;
     fecha: string;
     observaciones: string | null;
     estado: string;

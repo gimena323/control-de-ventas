@@ -257,7 +257,11 @@ const rightNavItems: NavItem[] = [
                                     <AvatarFallback
                                         class="avatar-initial rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
                                     >
-                                        {{ auth.user?.name?.charAt(0)?.toUpperCase() ?? '' }}
+                                        {{
+                                            auth.user?.name
+                                                ?.charAt(0)
+                                                ?.toUpperCase() ?? ''
+                                        }}
                                     </AvatarFallback>
                                 </Avatar>
                             </Button>
@@ -266,7 +270,6 @@ const rightNavItems: NavItem[] = [
                             <UserMenuContent :user="auth.user" />
                         </DropdownMenuContent>
                     </DropdownMenu>
-
                 </div>
             </div>
         </div>

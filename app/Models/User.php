@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable(['name', 'nombres', 'apellido_paterno', 'apellido_materno', 'email', 'password', 'role', 'status', 'telefono', 'fecha_ingreso', 'fecha_fin'])]
+#[Fillable(['name', 'nombres', 'apellido_paterno', 'apellido_materno', 'email', 'google_id', 'password', 'role', 'status', 'telefono', 'fecha_ingreso', 'fecha_fin'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -54,6 +55,11 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_user');
+    }
+
+    public function cliente(): HasOne
+    {
+        return $this->hasOne(Cliente::class);
     }
 
     public function assignRole(string $roleName): void

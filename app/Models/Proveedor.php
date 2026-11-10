@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['nombre', 'ci_nit', 'telefono', 'direccion', 'email'])]
 class Proveedor extends Model
@@ -15,6 +16,8 @@ class Proveedor extends Model
 
     /** @use HasFactory<ProveedorFactory> */
     use HasFactory;
+
+    use SoftDeletes;
 
     protected function casts(): array
     {

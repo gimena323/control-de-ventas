@@ -13,6 +13,7 @@ class ClientesController extends Controller
     public function index(Request $request): Response
     {
         $clientes = Cliente::query()
+            ->with('registradoPor:id,name,nombres,apellido_paterno,apellido_materno')
             ->withCount('ventas')
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($query) use ($search) {
@@ -35,6 +36,7 @@ class ClientesController extends Controller
     public function show(Cliente $cliente): Response
     {
         $cliente->loadCount('ventas');
+        $cliente->load('registradoPor:id,name,nombres,apellido_paterno,apellido_materno');
         $cliente->load(['ventas' => function ($query) {
             $query->latest()->limit(10);
         }]);
@@ -47,7 +49,7 @@ class ClientesController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:60',
+            'nombre' => 'required|string|max:160',
             'apellido' => 'nullable|string|max:100',
             'ci_nit' => 'required|string|max:20|unique:clientes,ci_nit',
             'telefono' => 'required|string|max:20',
@@ -63,6 +65,8 @@ class ClientesController extends Controller
             $validated['apellido'] = trim($validated['apellido']);
         }
 
+        $validated['registrado_por_user_id'] = $request->user()->id;
+
         Cliente::create($validated);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Cliente registrado correctamente.']);
@@ -73,7 +77,7 @@ class ClientesController extends Controller
     public function update(Request $request, Cliente $cliente): RedirectResponse
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:60',
+            'nombre' => 'required|string|max:160',
             'apellido' => 'nullable|string|max:100',
             'ci_nit' => 'required|string|max:20|unique:clientes,ci_nit,'.$cliente->id,
             'telefono' => 'required|string|max:20',
@@ -101,6 +105,19 @@ class ClientesController extends Controller
         $cliente->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Cliente eliminado correctamente.']);
+
+        return to_route('clientes.index');
+    }
+
+    public function toggleEstado(Cliente $cliente): RedirectResponse
+    {
+        $nuevoEstado = $cliente->isActivo() ? 'inactivo' : 'activo';
+        $cliente->update(['estado' => $nuevoEstado]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Cliente marcado como {$nuevoEstado}.",
+        ]);
 
         return to_route('clientes.index');
     }

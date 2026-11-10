@@ -17,7 +17,11 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
-            auth: Auth & { roles: string[]; permissions: string[]; isAdmin: boolean };
+            auth: Auth & {
+                roles: string[];
+                permissions: string[];
+                isAdmin: boolean;
+            };
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

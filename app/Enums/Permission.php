@@ -22,8 +22,12 @@ enum Permission: string
     case ProveedoresVer = 'proveedores.ver';
     case ProveedoresGestion = 'proveedores.gestion';
     case FacturasVer = 'facturas.ver';
+    case PedidosVer = 'pedidos.ver';
+    case PedidosGestion = 'pedidos.gestion';
     case UsuariosGestion = 'usuarios.gestion';
     case ConfiguracionesGestion = 'configuraciones.gestion';
+    case ReportesComprasVer = 'reportes.compras.ver';
+    case ReportesVentasVer = 'reportes.ventas.ver';
 
     public function label(): string
     {
@@ -46,8 +50,12 @@ enum Permission: string
             self::ProveedoresVer => 'Listar proveedores',
             self::ProveedoresGestion => 'Crear/editar/eliminar proveedores',
             self::FacturasVer => 'Ver facturas',
+            self::PedidosVer => 'Ver pedidos',
+            self::PedidosGestion => 'Gestionar pedidos',
             self::UsuariosGestion => 'Gestionar usuarios del sistema',
             self::ConfiguracionesGestion => 'Gestionar configuraciones',
+            self::ReportesComprasVer => 'Ver reportes de compras',
+            self::ReportesVentasVer => 'Ver reportes de ventas',
         };
     }
 
@@ -62,8 +70,10 @@ enum Permission: string
             self::ClientesVer, self::ClientesGestion => 'clientes',
             self::ProveedoresVer, self::ProveedoresGestion => 'proveedores',
             self::FacturasVer => 'facturas',
+            self::PedidosVer, self::PedidosGestion => 'pedidos',
             self::UsuariosGestion => 'usuarios',
             self::ConfiguracionesGestion => 'configuraciones',
+            self::ReportesComprasVer, self::ReportesVentasVer => 'reportes',
         };
     }
 
@@ -79,8 +89,14 @@ enum Permission: string
             self::ProductosVer,
             self::VentasVer,
             self::VentasCrear,
+            self::ComprasVer,
+            self::ComprasCrear,
             self::ClientesVer,
+            self::ClientesGestion,
             self::FacturasVer,
+            self::PedidosVer,
+            self::PedidosGestion,
+            self::ReportesVentasVer,
         ];
     }
 

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['compra_id', 'producto_id', 'producto', 'cantidad', 'precio_unitario', 'subtotal'])]
+#[Fillable(['compra_id', 'producto_id', 'producto_variante_id', 'producto', 'talla', 'color', 'cantidad', 'precio_unitario', 'subtotal'])]
 class CompraDetalle extends Model
 {
     protected $table = 'compra_detalles';
@@ -28,5 +28,10 @@ class CompraDetalle extends Model
     public function productoRelacion(): BelongsTo
     {
         return $this->belongsTo(Producto::class, 'producto_id');
+    }
+
+    public function variante(): BelongsTo
+    {
+        return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
     }
 }

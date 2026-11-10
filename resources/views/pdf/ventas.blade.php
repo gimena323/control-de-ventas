@@ -5,20 +5,20 @@
     <title>Reporte de Ventas - Emma Fashion</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #333; padding: 15px; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 8px; color: #333; padding: 10px; }
 
-        .header { text-align: center; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 3px solid #e11d48; }
-        .header h1 { font-size: 24px; font-weight: 800; color: #e11d48; letter-spacing: 2px; margin-bottom: 2px; }
-        .header h2 { font-size: 11px; font-weight: 400; color: #666; margin-bottom: 6px; }
-        .header h3 { font-size: 15px; font-weight: 700; color: #333; margin-top: 6px; }
+        .header { text-align: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #e11d48; }
+        .header h1 { font-size: 18px; font-weight: 800; color: #e11d48; letter-spacing: 1px; margin-bottom: 1px; }
+        .header h2 { font-size: 9px; font-weight: 400; color: #666; margin-bottom: 4px; }
+        .header h3 { font-size: 11px; font-weight: 700; color: #333; margin-top: 4px; }
 
-        .meta { display: flex; justify-content: space-between; margin-bottom: 12px; padding: 8px 12px; background: #f8f9fa; border-radius: 4px; font-size: 8px; color: #555; border: 1px solid #e9ecef; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 8px; background: #f8f9fa; border-radius: 3px; font-size: 7px; color: #555; border: 1px solid #e9ecef; }
         .meta strong { color: #333; }
 
-        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        th, td { border: 1px solid #dee2e6; padding: 4px 5px; text-align: left; }
-        th { background-color: #e11d48; color: white; font-weight: 600; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        td { font-size: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        th, td { border: 1px solid #dee2e6; padding: 2px 3px; text-align: left; }
+        th { background-color: #e11d48; color: white; font-weight: 600; font-size: 7px; text-transform: uppercase; letter-spacing: 0.3px; }
+        td { font-size: 7px; }
         tr:nth-child(even) { background-color: #f8f9fa; }
         tr:hover { background-color: #fff1f2; }
 
@@ -27,7 +27,7 @@
         .total-row { font-weight: bold; background-color: #fce7f3 !important; }
         .total-row td { border-top: 2px solid #e11d48; }
 
-        .section-title { font-size: 12px; font-weight: 700; margin: 14px 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #e11d48; color: #e11d48; }
+        .section-title { font-size: 10px; font-weight: 700; margin: 10px 0 4px 0; padding-bottom: 3px; border-bottom: 1px solid #e11d48; color: #e11d48; }
         .summary-table th { background-color: #fce7f3; color: #be123c; }
 
         .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #dee2e6; text-align: center; font-size: 7px; color: #999; }
@@ -53,35 +53,33 @@
     </div>
 
     @if(count($reporte['detalles']) > 0)
-        <div class="section-title">Detalle Completo de Productos Vendidos</div>
+        <div class="section-title">Detalle de Productos Vendidos</div>
         <table>
             <thead>
                 <tr>
-                    <th class="text-center" style="width:30px;">Nro</th>
-                    <th style="width:60px;">Fecha</th>
-                    <th>Cliente</th>
+                    <th class="text-center" style="width:24px;">Nro</th>
+                    <th>Descripción</th>
                     <th>Categoría</th>
                     <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Descripción</th>
-                    <th class="text-center" style="width:45px;">Cant.</th>
-                    <th class="text-right" style="width:65px;">P. Unitario</th>
-                    <th class="text-right" style="width:70px;">Subtotal</th>
+                    <th>Género</th>
+                    <th class="text-center" style="width:38px;">Cant.</th>
+                    <th class="text-center" style="width:38px;">Stock</th>
+                    <th class="text-right" style="width:60px;">P. Unit.</th>
+                    <th class="text-right" style="width:65px;">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($reporte['detalles'] as $i => $detalle)
+                @foreach($reporte['resumen_producto'] as $i => $producto)
                     <tr>
                         <td class="text-center">{{ $i + 1 }}</td>
-                        <td>{{ \Carbon\Carbon::parse($detalle['fecha'])->format('d/m/Y') }}</td>
-                        <td>{{ $detalle['cliente'] }}</td>
-                        <td>{{ $detalle['categoria'] }}</td>
-                        <td>{{ $detalle['marca'] }}</td>
-                        <td>{{ $detalle['modelo'] }}</td>
-                        <td>{{ $detalle['descripcion'] }}</td>
-                        <td class="text-center">{{ $detalle['cantidad'] }}</td>
-                        <td class="text-right">Bs {{ number_format($detalle['precio_unitario'], 2, ',', '.') }}</td>
-                        <td class="text-right"><strong>Bs {{ number_format($detalle['subtotal'], 2, ',', '.') }}</strong></td>
+                        <td>{{ $producto['descripcion'] }}</td>
+                        <td>{{ $producto['categoria'] }}</td>
+                        <td>{{ $producto['marca'] }}</td>
+                        <td>{{ $producto['genero'] ?? '---' }}</td>
+                        <td class="text-center">{{ $producto['cantidad'] }}</td>
+                        <td class="text-center">{{ $producto['stock'] }}</td>
+                        <td class="text-right">Bs {{ number_format($producto['precio_unitario'], 2, ',', '.') }}</td>
+                        <td class="text-right"><strong>Bs {{ number_format($producto['subtotal'], 2, ',', '.') }}</strong></td>
                     </tr>
                 @endforeach
             </tbody>

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['venta_id', 'producto_id', 'producto', 'cantidad', 'precio_unitario', 'descuento', 'subtotal'])]
+#[Fillable(['venta_id', 'producto_id', 'producto_variante_id', 'producto', 'talla', 'color', 'cantidad', 'precio_unitario', 'descuento', 'subtotal'])]
 class VentaDetalle extends Model
 {
     protected $table = 'venta_detalles';
@@ -29,5 +29,10 @@ class VentaDetalle extends Model
     public function productoRelacion(): BelongsTo
     {
         return $this->belongsTo(Producto::class, 'producto_id');
+    }
+
+    public function variante(): BelongsTo
+    {
+        return $this->belongsTo(ProductoVariante::class, 'producto_variante_id');
     }
 }

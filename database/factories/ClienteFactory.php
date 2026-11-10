@@ -17,15 +17,13 @@ class ClienteFactory extends Factory
      */
     public function definition(): array
     {
-        $tipo = fake()->randomElement(['DNI', 'RUC', 'CE']);
-
         return [
-            'nombre' => fake()->name(),
+            'nombre' => fake()->firstName(),
+            'apellido' => fake()->lastName(),
+            'ci_nit' => fake()->unique()->numerify('########'),
             'email' => fake()->unique()->safeEmail(),
-            'telefono' => fake()->phoneNumber(),
+            'telefono' => fake()->numerify('7#######'),
             'direccion' => fake()->address(),
-            'tipo_documento' => $tipo,
-            'numero_documento' => fake()->unique()->numerify(str_repeat('#', $tipo === 'RUC' ? 11 : 8)),
         ];
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['categoria_id', 'marca_id', 'modelo_id', 'talla_id', 'color_id', 'nombre', 'descripcion', 'precio_venta', 'imagen', 'estado'])]
+#[Fillable(['categoria_id', 'marca_id', 'talla_id', 'color_id', 'nombre', 'descripcion', 'precio_venta', 'imagen', 'estado', 'genero'])]
 class Producto extends Model
 {
     protected $table = 'productos';
@@ -32,11 +32,6 @@ class Producto extends Model
         return $this->belongsTo(Marca::class);
     }
 
-    public function modelo(): BelongsTo
-    {
-        return $this->belongsTo(Modelo::class);
-    }
-
     public function talla(): BelongsTo
     {
         return $this->belongsTo(Talla::class);
@@ -55,5 +50,25 @@ class Producto extends Model
     public function variantes(): HasMany
     {
         return $this->hasMany(ProductoVariante::class);
+    }
+
+    public function imagenes(): HasMany
+    {
+        return $this->hasMany(ProductoImagen::class)->orderBy('orden');
+    }
+
+    public function ventasDetalles(): HasMany
+    {
+        return $this->hasMany(VentaDetalle::class, 'producto_id');
+    }
+
+    public function comprasDetalles(): HasMany
+    {
+        return $this->hasMany(CompraDetalle::class, 'producto_id');
+    }
+
+    public function ultimaCompraDetalle(): HasOne
+    {
+        return $this->hasOne(CompraDetalle::class, 'producto_id')->latestOfMany();
     }
 }

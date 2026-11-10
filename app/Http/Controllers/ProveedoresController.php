@@ -13,7 +13,7 @@ class ProveedoresController extends Controller
     public function index(Request $request): Response
     {
         $proveedores = Proveedor::query()
-            ->withCount('compras')
+            ->withCount(['compras' => fn ($query) => $query->where('estado', '!=', 'anulada')])
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($query) use ($search) {
                     $query->where('nombre', 'like', "%{$search}%")
@@ -33,9 +33,9 @@ class ProveedoresController extends Controller
 
     public function show(Proveedor $proveedor): Response
     {
-        $proveedor->loadCount('compras');
+        $proveedor->loadCount(['compras' => fn ($query) => $query->where('estado', '!=', 'anulada')]);
         $proveedor->load(['compras' => function ($query) {
-            $query->latest()->limit(10);
+            $query->where('estado', '!=', 'anulada')->latest()->limit(10);
         }]);
 
         return Inertia::render('Proveedores/show', [
@@ -89,7 +89,7 @@ class ProveedoresController extends Controller
     {
         $proveedor->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Proveedor eliminado correctamente.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Proveedor anulado. Sus compras e historial se conservan.']);
 
         return to_route('proveedores.index');
     }

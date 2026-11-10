@@ -6,9 +6,10 @@ use Database\Factories\ClienteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['nombre', 'apellido', 'email', 'telefono', 'direccion', 'ci_nit'])]
+#[Fillable(['user_id', 'nombre', 'apellido', 'email', 'telefono', 'direccion', 'ci_nit', 'estado', 'registrado_por_user_id'])]
 class Cliente extends Model
 {
     /** @use HasFactory<ClienteFactory> */
@@ -22,8 +23,23 @@ class Cliente extends Model
         ];
     }
 
+    public function isActivo(): bool
+    {
+        return $this->estado === 'activo';
+    }
+
     public function ventas(): HasMany
     {
         return $this->hasMany(Venta::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function registradoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'registrado_por_user_id');
     }
 }

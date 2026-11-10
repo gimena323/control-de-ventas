@@ -22,6 +22,10 @@ return new class extends Migration
         });
 
         Schema::table('clientes', function (Blueprint $table) {
+            $table->dropUnique('clientes_numero_documento_unique');
+        });
+
+        Schema::table('clientes', function (Blueprint $table) {
             $table->dropColumn(['tipo_documento', 'numero_documento']);
         });
     }

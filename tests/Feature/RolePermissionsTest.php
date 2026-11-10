@@ -17,8 +17,22 @@ function userWithRole(string $roleName): User
     return $user->fresh();
 }
 
+function userWithPermissions(array $permissions): User
+{
+    $role = Role::create([
+        'nombre' => 'consulta_'.str()->random(6),
+        'descripcion' => 'Rol de solo consulta',
+    ]);
+    $role->syncPermissionsByName($permissions);
+
+    $user = User::factory()->create(['role' => $role->nombre]);
+    $user->roles()->sync([$role->id]);
+
+    return $user->fresh();
+}
+
 test('admin accede a clientes.index', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->get(route('clientes.index'));
 
@@ -26,35 +40,39 @@ test('admin accede a clientes.index', function () {
 });
 
 test('admin accede a crear clientes via POST', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->post(route('clientes.store'), [
         'nombre' => 'Test Cliente',
+        'ci_nit' => '12345678',
+        'telefono' => '70000000',
     ]);
 
     $response->assertSessionDoesntHaveErrors();
 });
 
-test('cajera accede a clientes.index', function () {
-    $user = userWithRole('cajera');
+test('vendedor accede a clientes.index', function () {
+    $user = userWithRole(Role::VENDEDOR);
 
     $response = $this->actingAs($user)->get(route('clientes.index'));
 
     $response->assertOk();
 });
 
-test('cajera NO puede crear clientes (403)', function () {
-    $user = userWithRole('cajera');
+test('usuario sin clientes.gestion NO puede crear clientes (403)', function () {
+    $user = userWithPermissions([Permission::ClientesVer->value]);
 
     $response = $this->actingAs($user)->post(route('clientes.store'), [
         'nombre' => 'Test Cliente',
+        'ci_nit' => '12345678',
+        'telefono' => '70000000',
     ]);
 
     $response->assertForbidden();
 });
 
-test('cajera NO puede editar clientes (403)', function () {
-    $user = userWithRole('cajera');
+test('usuario sin clientes.gestion NO puede editar clientes (403)', function () {
+    $user = userWithPermissions([Permission::ClientesVer->value]);
     $cliente = Cliente::factory()->create();
 
     $response = $this->actingAs($user)->patch(route('clientes.update', $cliente->id), [
@@ -64,80 +82,68 @@ test('cajera NO puede editar clientes (403)', function () {
     $response->assertForbidden();
 });
 
-test('cajera NO puede eliminar clientes (403)', function () {
-    $user = userWithRole('cajera');
+test('usuario sin clientes.gestion NO puede cambiar el estado de un cliente (403)', function () {
+    $user = userWithPermissions([Permission::ClientesVer->value]);
     $cliente = Cliente::factory()->create();
 
-    $response = $this->actingAs($user)->delete(route('clientes.destroy', $cliente->id));
+    $response = $this->actingAs($user)->patch(route('clientes.estado', $cliente->id));
 
     $response->assertForbidden();
 });
 
-test('cajera tiene permiso panel.ver', function () {
-    $user = userWithRole('cajera');
+test('vendedor tiene permiso panel.ver', function () {
+    $user = userWithRole(Role::VENDEDOR);
 
     expect($user->hasPermission(Permission::PanelVer->value))->toBeTrue();
 });
 
-test('cajera NO tiene permiso afiliados.gestionar', function () {
-    $user = userWithRole('cajera');
+test('vendedor NO tiene permiso usuarios.gestionar', function () {
+    $user = userWithRole(Role::VENDEDOR);
 
-    expect($user->hasPermission(Permission::AfiliadosGestionar->value))->toBeFalse();
+    expect($user->hasPermission(Permission::UsuariosGestion->value))->toBeFalse();
 });
 
-test('cajera NO tiene permiso tramites.aprobar', function () {
-    $user = userWithRole('cajera');
+test('vendedor NO tiene permiso configuraciones.gestionar', function () {
+    $user = userWithRole(Role::VENDEDOR);
 
-    expect($user->hasPermission(Permission::TramitesAprobar->value))->toBeFalse();
-});
-
-test('cajera NO tiene permiso reportes.deudas', function () {
-    $user = userWithRole('cajera');
-
-    expect($user->hasPermission(Permission::ReportesDeudas->value))->toBeFalse();
-});
-
-test('cajera NO tiene permiso usuarios.gestionar', function () {
-    $user = userWithRole('cajera');
-
-    expect($user->hasPermission(Permission::UsuariosGestionar->value))->toBeFalse();
+    expect($user->hasPermission(Permission::ConfiguracionesGestion->value))->toBeFalse();
 });
 
 test('admin tiene todos los permisos via hasPermission', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
-    expect($user->hasPermission(Permission::AfiliadosGestionar->value))->toBeTrue();
-    expect($user->hasPermission(Permission::TramitesAprobar->value))->toBeTrue();
-    expect($user->hasPermission(Permission::ReportesDeudas->value))->toBeTrue();
-    expect($user->hasPermission(Permission::UsuariosGestionar->value))->toBeTrue();
+    expect($user->hasPermission(Permission::UsuariosGestion->value))->toBeTrue();
+    expect($user->hasPermission(Permission::ConfiguracionesGestion->value))->toBeTrue();
+    expect($user->hasPermission(Permission::ReportesVentasVer->value))->toBeTrue();
+    expect($user->hasPermission(Permission::ReportesComprasVer->value))->toBeTrue();
 });
 
 test('isAdmin funciona correctamente', function () {
-    $admin = userWithRole('admin');
-    $cajera = userWithRole('cajera');
+    $admin = userWithRole(Role::ADMIN);
+    $vendedor = userWithRole(Role::VENDEDOR);
 
     expect($admin->isAdmin())->toBeTrue();
-    expect($cajera->isAdmin())->toBeFalse();
+    expect($vendedor->isAdmin())->toBeFalse();
 });
 
 test('assignRole asigna correctamente el rol', function () {
     $user = User::factory()->create();
-    $user->assignRole('admin');
+    $user->assignRole(Role::ADMIN);
 
-    expect($user->hasRole('admin'))->toBeTrue();
-    expect($user->fresh()->role)->toBe('admin');
+    expect($user->hasRole(Role::ADMIN))->toBeTrue();
+    expect($user->fresh()->role)->toBe(Role::ADMIN);
 });
 
 test('syncRolesFromLegacyColumn sincroniza desde columna legacy', function () {
-    $user = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create(['role' => Role::ADMIN]);
 
     $user->syncRolesFromLegacyColumn();
 
-    expect($user->hasRole('admin'))->toBeTrue();
+    expect($user->hasRole(Role::ADMIN))->toBeTrue();
 });
 
 test('ensureRolesHavePermissions asigna permisos por defecto', function () {
-    $role = Role::where('nombre', 'admin')->firstOrFail();
+    $role = Role::where('nombre', Role::ADMIN)->firstOrFail();
     $role->permissions()->sync([]);
     $role->ensureDefaultPermissions();
 
@@ -145,15 +151,15 @@ test('ensureRolesHavePermissions asigna permisos por defecto', function () {
 });
 
 test('admin accede a roles.index', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->get(route('roles.index'));
 
     $response->assertOk();
 });
 
-test('cajera NO puede acceder a roles.index (403)', function () {
-    $user = userWithRole('cajera');
+test('vendedor NO puede acceder a roles.index (403)', function () {
+    $user = userWithRole(Role::VENDEDOR);
 
     $response = $this->actingAs($user)->get(route('roles.index'));
 
@@ -161,7 +167,7 @@ test('cajera NO puede acceder a roles.index (403)', function () {
 });
 
 test('admin puede crear un nuevo rol', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->post(route('roles.store'), [
         'nombre' => 'supervisor',
@@ -173,12 +179,12 @@ test('admin puede crear un nuevo rol', function () {
 });
 
 test('admin puede actualizar permisos de un rol', function () {
-    $user = userWithRole('admin');
-    $role = Role::where('nombre', 'cajera')->firstOrFail();
+    $user = userWithRole(Role::ADMIN);
+    $role = Role::where('nombre', Role::VENDEDOR)->firstOrFail();
 
     $response = $this->actingAs($user)->put(route('roles.update', $role->id), [
-        'nombre' => 'cajera',
-        'permisos' => ['panel.ver', 'pagos.ver', 'pagos.gestionar'],
+        'nombre' => Role::VENDEDOR,
+        'permisos' => [Permission::PanelVer->value, Permission::VentasVer->value, Permission::VentasCrear->value],
     ]);
 
     $response->assertSessionDoesntHaveErrors();
@@ -186,25 +192,25 @@ test('admin puede actualizar permisos de un rol', function () {
 });
 
 test('admin no puede eliminar un rol con usuarios asignados', function () {
-    $user = userWithRole('admin');
-    userWithRole('cajera');
-    $role = Role::where('nombre', 'cajera')->firstOrFail();
+    $user = userWithRole(Role::ADMIN);
+    userWithRole(Role::VENDEDOR);
+    $role = Role::where('nombre', Role::VENDEDOR)->firstOrFail();
 
     $response = $this->actingAs($user)->delete(route('roles.destroy', $role->id));
 
-    expect(Role::where('nombre', 'cajera')->exists())->toBeTrue();
+    expect(Role::where('nombre', Role::VENDEDOR)->exists())->toBeTrue();
 });
 
 test('admin accede a usuarios.index', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->get(route('usuarios.index'));
 
     $response->assertOk();
 });
 
-test('cajera NO puede acceder a usuarios.index (403)', function () {
-    $user = userWithRole('cajera');
+test('vendedor NO puede acceder a usuarios.index (403)', function () {
+    $user = userWithRole(Role::VENDEDOR);
 
     $response = $this->actingAs($user)->get(route('usuarios.index'));
 
@@ -212,7 +218,7 @@ test('cajera NO puede acceder a usuarios.index (403)', function () {
 });
 
 test('admin puede crear un nuevo usuario', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->post(route('usuarios.store'), [
         'nombres' => 'Test',
@@ -220,7 +226,7 @@ test('admin puede crear un nuevo usuario', function () {
         'apellido_materno' => 'Apellido',
         'email' => 'testuser@example.com',
         'password' => 'password123',
-        'role' => 'cajera',
+        'role' => Role::VENDEDOR,
     ]);
 
     $response->assertSessionDoesntHaveErrors();
@@ -228,23 +234,23 @@ test('admin puede crear un nuevo usuario', function () {
 });
 
 test('admin puede actualizar rol de un usuario', function () {
-    $admin = userWithRole('admin');
-    $target = userWithRole('cajera');
+    $admin = userWithRole(Role::ADMIN);
+    $target = userWithRole(Role::VENDEDOR);
 
     $response = $this->actingAs($admin)->patch(route('usuarios.update', $target->id), [
         'nombres' => $target->nombres ?? 'Test',
         'apellido_paterno' => $target->apellido_paterno ?? 'User',
         'apellido_materno' => $target->apellido_materno ?? 'Apellido',
         'email' => $target->email,
-        'role' => 'admin',
+        'role' => Role::ADMIN,
     ]);
 
     $response->assertSessionDoesntHaveErrors();
-    expect($target->fresh()->hasRole('admin'))->toBeTrue();
+    expect($target->fresh()->hasRole(Role::ADMIN))->toBeTrue();
 });
 
 test('admin no puede eliminarse a si mismo', function () {
-    $user = userWithRole('admin');
+    $user = userWithRole(Role::ADMIN);
 
     $response = $this->actingAs($user)->delete(route('usuarios.destroy', $user->id));
 

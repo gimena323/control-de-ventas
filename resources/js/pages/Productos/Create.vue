@@ -1,10 +1,34 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, DollarSign, FileText, FolderOpen, Image, ImagePlus, Palette, Plus, Ruler, Save, Shirt, ShoppingBag, Tag, Trash2, X } from 'lucide-vue-next';
+import {
+    ArrowLeft,
+    CircleDollarSign,
+    FileText,
+    FolderOpen,
+    Image,
+    ImagePlus,
+    Package,
+    Palette,
+    Ruler,
+    Save,
+    ShoppingBag,
+    Shirt,
+    Sparkles,
+    Tag,
+    UserRound,
+    X,
+} from 'lucide-vue-next';
+import type { AcceptableValue } from 'reka-ui';
 import { computed, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
+import {
+    index,
+    store,
+} from '@/actions/App/Http/Controllers/ProductosController';
 import InputError from '@/components/InputError.vue';
+import MultiSelectDropdown from '@/components/MultiSelectDropdown.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -12,24 +36,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { index, store } from '@/actions/App/Http/Controllers/ProductosController';
-import type { Categoria, Color, Marca, Modelo, Talla } from '@/types';
+import { detectDominantHex, findClosestColorId } from '@/lib/colorDetection';
+import type { Categoria, Color, Marca, Talla } from '@/types';
 
 type Props = {
     categorias: Categoria[];
     marcas: Marca[];
-    modelos: Modelo[];
     tallas: Talla[];
     colores: Color[];
 };
 
 const props = defineProps<Props>();
-
-const modelosFiltrados = computed(() =>
-    props.modelos.filter((m) => String(m.marca_id) === form.marca_id),
-);
 
 defineOptions({
     layout: {
@@ -43,83 +60,183 @@ defineOptions({
 const form = useForm({
     categoria_id: '',
     marca_id: '',
-    modelo_id: '',
-    talla_id: '',
-    color_id: '',
+    tallas: [] as number[],
+    colores: [] as number[],
     nombre: '',
     descripcion: '',
     precio_venta: '',
-    imagen: null as File | null,
+    imagenes: [] as File[],
+    imagenes_colores: [] as (number | null)[],
     estado: 'activo',
-    variantes: [] as Array<{ color_id: string; talla_id: string; stock: number; disponible: boolean }>,
+    genero: 'femenino',
 });
 
-const imagePreview = ref<string | null>(null);
+const imagePreviews = ref<{ name: string; url: string }[]>([]);
+const selectedName = <T extends { id: number; nombre: string }>(
+    items: T[],
+    id: string,
+) => items.find((item) => String(item.id) === id)?.nombre;
 
 function handleImageUpload(event: Event) {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) {
-        form.imagen = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreview.value = e.target?.result as string;
-        };
-        reader.readAsDataURL(file);
+    const files = Array.from(target.files ?? []).slice(
+        0,
+        Math.max(0, 10 - form.imagenes.length),
+    );
+
+    for (const file of files) {
+        form.imagenes.push(file);
+        imagePreviews.value.push({
+            name: file.name,
+            url: URL.createObjectURL(file),
+        });
     }
+
+    target.value = '';
 }
 
-function removeImage() {
-    form.imagen = null;
-    imagePreview.value = null;
+function removeImage(index: number) {
+    URL.revokeObjectURL(imagePreviews.value[index].url);
+    form.imagenes.splice(index, 1);
+    imagePreviews.value.splice(index, 1);
 }
 
-function onMarcaChange(value: string) {
-    form.marca_id = value;
-    form.modelo_id = '';
+const productoError = computed(
+    () => (form.errors as Record<string, string | undefined>).producto,
+);
+
+function onMarcaChange(value: AcceptableValue) {
+    form.marca_id = typeof value === 'string' ? value : '';
 }
 
-function submit() {
+async function submit() {
+    const coloresDisponibles = props.colores.filter((color) =>
+        form.colores.includes(color.id),
+    );
+
+    form.imagenes_colores = await Promise.all(
+        form.imagenes.map(async (file) => {
+            const hex = await detectDominantHex(file);
+
+            if (!hex) {
+                return null;
+            }
+
+            return findClosestColorId(hex, coloresDisponibles);
+        }),
+    );
+
     form.post(store().url, {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        forceFormData: true,
+        onSuccess: () => {
+            imagePreviews.value.forEach((preview) =>
+                URL.revokeObjectURL(preview.url),
+            );
+            imagePreviews.value = [];
+            form.reset();
+        },
     });
-}
-
-function addVariante() {
-    form.variantes.push({ color_id: '', talla_id: '', stock: 0, disponible: true });
-}
-
-function removeVariante(index: number) {
-    form.variantes.splice(index, 1);
 }
 </script>
 
 <template>
     <Head title="Crear Nueva Prenda" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-        <div class="flex items-start justify-between">
-            <Heading
-                title="Crear Nueva Prenda"
-                description="Agrega una nueva prenda al inventario."
-            />
-            <Link :href="index()">
-                <Button variant="outline">
-                    <ArrowLeft class="mr-2 h-4 w-4" />
-                    Volver
+    <div
+        class="relative flex h-full flex-1 flex-col gap-5 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#fff8f7_0%,#fff2f6_42%,#f7f1ff_100%)] p-3 sm:p-5"
+    >
+        <div
+            class="pointer-events-none absolute -top-20 -left-20 size-64 rounded-full bg-pink-200/35 blur-3xl"
+        ></div>
+        <div
+            class="pointer-events-none absolute right-0 bottom-0 size-72 rounded-full bg-violet-200/30 blur-3xl"
+        ></div>
+
+        <section
+            class="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-[0_18px_50px_-28px_rgba(126,34,206,0.45)] backdrop-blur"
+        >
+            <div
+                class="absolute inset-y-0 right-0 hidden w-[48%] bg-[url('/images/dashboard-boutique-hero.png')] bg-cover bg-right lg:block"
+            ></div>
+            <div
+                class="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/15"
+            ></div>
+            <div
+                class="relative flex min-h-40 items-center justify-between gap-5 px-5 py-6 sm:px-8 lg:min-h-48 lg:max-w-[68%]"
+            >
+                <div class="flex items-center gap-4 sm:gap-5">
+                    <span
+                        class="flex size-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-700 text-white shadow-xl shadow-pink-200 sm:size-20"
+                    >
+                        <Shirt class="size-8 sm:size-10" />
+                    </span>
+                    <div>
+                        <span
+                            class="mb-2 inline-flex items-center gap-1 rounded-full bg-pink-50 px-3 py-1 text-[11px] font-bold tracking-wider text-pink-600 uppercase"
+                        >
+                            <Sparkles class="size-3.5" /> Nueva colección
+                        </span>
+                        <h1
+                            class="text-2xl font-black tracking-tight text-slate-900 sm:text-4xl"
+                        >
+                            Crear Nueva Prenda
+                        </h1>
+                        <p class="mt-1 text-sm text-slate-600 sm:text-base">
+                            Agrega una nueva prenda al inventario.
+                        </p>
+                    </div>
+                </div>
+                <Link :href="index()" class="self-start lg:hidden">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        class="rounded-xl bg-white/90"
+                    >
+                        <ArrowLeft class="h-4 w-4" />
+                        <span class="hidden sm:inline">Volver</span>
+                    </Button>
+                </Link>
+            </div>
+            <Link
+                :href="index()"
+                class="absolute top-5 right-5 hidden lg:block"
+            >
+                <Button
+                    variant="outline"
+                    class="rounded-xl border-white/70 bg-white/85 shadow-sm backdrop-blur"
+                >
+                    <ArrowLeft class="mr-2 h-4 w-4" /> Volver
                 </Button>
             </Link>
-        </div>
+        </section>
 
-        <form @submit.prevent="submit" class="space-y-6">
-            <div class="overflow-hidden rounded-xl border bg-glass">
-                <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-5">
-                    <div class="grid gap-2">
-                        <Label for="categoria_id"><FolderOpen class="mr-1 inline-block h-3.5 w-3.5" />Categoría</Label>
+        <form @submit.prevent="submit" class="relative space-y-5">
+            <div
+                class="overflow-hidden rounded-[2rem] border border-white/90 bg-white/80 p-3 shadow-[0_24px_70px_-35px_rgba(190,24,93,0.45)] backdrop-blur-xl sm:p-5"
+            >
+                <div
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                >
+                    <div
+                        class="grid min-w-0 gap-2 rounded-2xl border border-pink-100 bg-gradient-to-br from-pink-50 to-rose-50/70 p-4 shadow-sm"
+                    >
+                        <Label for="categoria_id"
+                            ><FolderOpen
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Categoría</Label
+                        >
                         <Select v-model="form.categoria_id">
                             <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar categoría" />
+                                <SelectValue
+                                    placeholder="Seleccionar categoría"
+                                    >{{
+                                        selectedName(
+                                            categorias,
+                                            form.categoria_id,
+                                        )
+                                    }}</SelectValue
+                                >
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
@@ -133,12 +250,22 @@ function removeVariante(index: number) {
                         </Select>
                         <InputError :message="form.errors.categoria_id" />
                     </div>
-
-                    <div class="grid gap-2">
-                        <Label for="marca_id"><Tag class="mr-1 inline-block h-3.5 w-3.5" />Marca</Label>
-                        <Select :model-value="form.marca_id" @update:model-value="onMarcaChange">
+                    <div
+                        class="grid min-w-0 gap-2 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-purple-50/70 p-4 shadow-sm"
+                    >
+                        <Label for="marca_id"
+                            ><Tag
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Marca</Label
+                        >
+                        <Select
+                            :model-value="form.marca_id"
+                            @update:model-value="onMarcaChange"
+                        >
                             <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar marca" />
+                                <SelectValue placeholder="Seleccionar marca">{{
+                                    selectedName(marcas, form.marca_id)
+                                }}</SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
@@ -153,73 +280,71 @@ function removeVariante(index: number) {
                         <InputError :message="form.errors.marca_id" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="modelo_id"><Shirt class="mr-1 inline-block h-3.5 w-3.5" />Modelo de Prenda</Label>
-                        <Select v-model="form.modelo_id" :disabled="!form.marca_id">
-                            <SelectTrigger>
-                                <SelectValue :placeholder="form.marca_id ? 'Selecciona el modelo de la prenda' : 'Primero selecciona una marca'" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    v-for="modelo in modelosFiltrados"
-                                    :key="modelo.id"
-                                    :value="String(modelo.id)"
-                                >
-                                    {{ modelo.nombre }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.modelo_id" />
+                    <div
+                        class="grid gap-2 rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50 to-teal-50/70 p-4 shadow-sm"
+                    >
+                        <Label
+                            ><Ruler
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Tallas</Label
+                        >
+                        <MultiSelectDropdown
+                            v-model="form.tallas"
+                            :items="tallas"
+                            placeholder="Seleccionar tallas"
+                        />
+                        <InputError :message="form.errors.tallas" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="talla_id"><Ruler class="mr-1 inline-block h-3.5 w-3.5" />Talla</Label>
-                        <Select v-model="form.talla_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar talla" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    v-for="talla in tallas"
-                                    :key="talla.id"
-                                    :value="String(talla.id)"
-                                >
-                                    {{ talla.nombre }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.talla_id" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="color_id"><Palette class="mr-1 inline-block h-3.5 w-3.5" />Color</Label>
-                        <Select v-model="form.color_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar color" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    v-for="color in colores"
-                                    :key="color.id"
-                                    :value="String(color.id)"
-                                >
-                                    <span class="flex items-center gap-2">
-                                        <span
-                                            class="inline-block h-4 w-4 rounded-full border shadow-sm"
-                                            :style="{ backgroundColor: color.codigo_hex }"
-                                        />
-                                        {{ color.nombre }}
-                                    </span>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.color_id" />
+                    <div
+                        class="grid gap-2 rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50/70 p-4 shadow-sm"
+                    >
+                        <Label
+                            ><Palette
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Colores</Label
+                        >
+                        <MultiSelectDropdown
+                            v-model="form.colores"
+                            :items="colores"
+                            placeholder="Seleccionar colores"
+                            show-color-dot
+                        />
+                        <InputError :message="form.errors.colores" />
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-6 border-t px-6 py-6 md:grid-cols-3">
+                <div
+                    class="mt-4 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50/80 to-fuchsia-50/60 p-4"
+                >
                     <div class="grid gap-2">
-                        <Label for="nombre"><ShoppingBag class="mr-1 inline-block h-3.5 w-3.5" />Nombre de la Prenda *</Label>
+                        <Label for="descripcion">
+                            <FileText class="mr-1 inline-block h-3.5 w-3.5" />
+                            Descripción de la Prenda
+                        </Label>
+                        <textarea
+                            id="descripcion"
+                            v-model="form.descripcion"
+                            maxlength="1000"
+                            rows="4"
+                            class="min-h-28 w-full resize-y rounded-xl border border-violet-100 bg-white/90 px-4 py-3 text-sm shadow-sm outline-none placeholder:text-muted-foreground focus-visible:border-fuchsia-300 focus-visible:ring-[3px] focus-visible:ring-fuchsia-200/60"
+                            placeholder="Ej.: Polera de algodón, cuello redondo y corte cómodo."
+                        ></textarea>
+                        <InputError :message="form.errors.descripcion" />
+                    </div>
+                </div>
+
+                <div
+                    class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+                >
+                    <div
+                        class="grid gap-2 rounded-2xl border border-rose-100 bg-rose-50/65 p-4"
+                    >
+                        <Label for="nombre"
+                            ><ShoppingBag
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Nombre de la Prenda *</Label
+                        >
                         <Input
                             id="nombre"
                             v-model="form.nombre"
@@ -228,8 +353,14 @@ function removeVariante(index: number) {
                         <InputError :message="form.errors.nombre" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="precio_venta"><DollarSign class="mr-1 inline-block h-3.5 w-3.5" />Precio de Venta (Bs) *</Label>
+                    <div
+                        class="grid gap-2 rounded-2xl border border-blue-100 bg-blue-50/65 p-4"
+                    >
+                        <Label for="precio_venta"
+                            ><CircleDollarSign
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Precio de Venta (Bs) *</Label
+                        >
                         <Input
                             id="precio_venta"
                             v-model="form.precio_venta"
@@ -241,178 +372,135 @@ function removeVariante(index: number) {
                         <InputError :message="form.errors.precio_venta" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="estado"><Package class="mr-1 inline-block h-3.5 w-3.5" />Estado *</Label>
+                    <div
+                        class="grid gap-2 rounded-2xl border border-fuchsia-100 bg-fuchsia-50/65 p-4"
+                    >
+                        <Label for="estado"
+                            ><Package
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Estado *</Label
+                        >
                         <Select v-model="form.estado">
                             <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar estado" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="activo">Activo</SelectItem>
-                                <SelectItem value="inactivo">Inactivo</SelectItem>
+                                <SelectItem value="inactivo"
+                                    >Inactivo</SelectItem
+                                >
                             </SelectContent>
                         </Select>
                         <InputError :message="form.errors.estado" />
                     </div>
+                    <div
+                        class="grid gap-2 rounded-2xl border border-amber-100 bg-amber-50/65 p-4"
+                    >
+                        <Label for="genero"
+                            ><UserRound
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Género *</Label
+                        >
+                        <Select v-model="form.genero">
+                            <SelectTrigger id="genero"
+                                ><SelectValue placeholder="Seleccionar género"
+                            /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="femenino"
+                                    >Femenino</SelectItem
+                                >
+                                <SelectItem value="masculino"
+                                    >Masculino</SelectItem
+                                >
+                            </SelectContent>
+                        </Select>
+                        <InputError :message="form.errors.genero" />
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-6 border-t px-6 py-6 md:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label><Image class="mr-1 inline-block h-3.5 w-3.5" />Imagen de la Prenda</Label>
+                <div class="mt-4 grid grid-cols-1 gap-4">
+                    <div
+                        class="grid gap-3 rounded-2xl border border-dashed border-fuchsia-200 bg-gradient-to-r from-pink-50/80 via-white to-violet-50/80 p-5"
+                    >
+                        <Label
+                            ><Image
+                                class="mr-1 inline-block h-3.5 w-3.5"
+                            />Imagen de la Prenda</Label
+                        >
                         <div class="flex items-center gap-3">
                             <label
-                                class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm transition-colors hover:bg-muted"
+                                class="flex cursor-pointer items-center gap-2 rounded-xl border border-fuchsia-200 bg-gradient-to-r from-pink-600 to-fuchsia-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-200 transition-all hover:-translate-y-0.5 hover:shadow-xl"
                             >
                                 <ImagePlus class="h-4 w-4" />
-                                <span>Seleccionar archivo</span>
+                                <span>Seleccionar imágenes</span>
                                 <input
                                     type="file"
+                                    multiple
                                     accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                     class="hidden"
                                     @change="handleImageUpload"
                                 />
                             </label>
-                            <button
-                                v-if="imagePreview"
-                                type="button"
-                                class="text-red-500 hover:text-red-600"
-                                @click="removeImage"
-                            >
-                                <X class="h-4 w-4" />
-                            </button>
                         </div>
                         <div
-                            v-if="imagePreview"
-                            class="mt-2 overflow-hidden rounded-lg border"
+                            v-if="imagePreviews.length"
+                            class="mt-2 grid grid-cols-2 gap-3 rounded-2xl border border-pink-100 bg-white/80 p-3 sm:grid-cols-3 lg:grid-cols-5"
                         >
-                            <img
-                                :src="imagePreview"
-                                alt="Preview"
-                                class="h-24 w-24 object-cover"
-                            />
+                            <div
+                                v-for="(preview, index) in imagePreviews"
+                                :key="preview.url"
+                                class="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                            >
+                                <img
+                                    :src="preview.url"
+                                    :alt="`Vista previa ${index + 1}`"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span
+                                    v-if="index === 0"
+                                    class="absolute bottom-2 left-2 rounded-full bg-fuchsia-600 px-2 py-1 text-[10px] font-semibold text-white"
+                                    >Principal</span
+                                >
+                                <button
+                                    type="button"
+                                    class="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-white/95 text-red-500 shadow-sm hover:bg-red-50"
+                                    :aria-label="`Eliminar imagen ${index + 1}`"
+                                    @click="removeImage(index)"
+                                >
+                                    <X class="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
-                        <InputError :message="form.errors.imagen" />
-                    </div>
-                </div>
-
-                <div class="border-t px-6 py-4">
-                    <div class="grid gap-2">
-                        <Label for="descripcion"><FileText class="mr-1 inline-block h-3.5 w-3.5" />Descripción de la Prenda</Label>
-                        <textarea
-                            id="descripcion"
-                            v-model="form.descripcion"
-                            class="flex min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="Ej: Jean azul talla M, Polera blanca cuello redondo..."
-                        />
-                        <InputError :message="form.errors.descripcion" />
+                        <InputError :message="form.errors.imagenes" />
                     </div>
                 </div>
             </div>
 
-            <div class="overflow-hidden rounded-xl border bg-glass">
-                <div class="flex items-center justify-between border-b px-6 py-4">
-                    <div>
-                        <h3 class="text-sm font-semibold">Variantes del producto</h3>
-                        <p class="text-muted-foreground text-xs">Combina colores y tallas con stock individual. Opcional.</p>
-                    </div>
-                    <Button type="button" variant="outline" size="sm" @click="addVariante">
-                        <Plus class="mr-1 h-3.5 w-3.5" />
-                        Agregar variante
-                    </Button>
-                </div>
-
-                <div v-if="form.variantes.length > 0" class="divide-y">
-                    <div
-                        v-for="(variante, index) in form.variantes"
-                        :key="index"
-                        class="grid grid-cols-1 gap-4 px-6 py-4 md:grid-cols-12"
-                    >
-                        <div class="grid gap-2 md:col-span-3">
-                            <Label class="text-xs">Color *</Label>
-                            <Select v-model="variante.color_id">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Color" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="color in colores"
-                                        :key="color.id"
-                                        :value="String(color.id)"
-                                    >
-                                        <span class="flex items-center gap-2">
-                                            <span
-                                                class="inline-block h-3 w-3 rounded-full border shadow-sm"
-                                                :style="{ backgroundColor: color.codigo_hex }"
-                                            />
-                                            {{ color.nombre }}
-                                        </span>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div class="grid gap-2 md:col-span-3">
-                            <Label class="text-xs">Talla *</Label>
-                            <Select v-model="variante.talla_id">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Talla" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="talla in tallas"
-                                        :key="talla.id"
-                                        :value="String(talla.id)"
-                                    >
-                                        {{ talla.nombre }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div class="grid gap-2 md:col-span-2">
-                            <Label class="text-xs">Stock *</Label>
-                            <Input
-                                v-model.number="variante.stock"
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                            />
-                        </div>
-
-                        <div class="grid gap-2 md:col-span-2">
-                            <Label class="text-xs">Estado *</Label>
-                            <Select v-model="variante.disponible">
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem :value="true">Disponible</SelectItem>
-                                    <SelectItem :value="false">No disponible</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div class="flex items-end md:col-span-2">
-                            <Button type="button" variant="destructive" size="icon-sm" @click="removeVariante(index)">
-                                <Trash2 class="h-3.5 w-3.5" />
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-else class="px-6 py-8 text-center">
-                    <p class="text-muted-foreground text-xs">No hay variantes agregadas. Haz clic en "Agregar variante" para combinar colores y tallas.</p>
-                </div>
+            <div
+                v-if="productoError"
+                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+            >
+                <InputError :message="productoError" />
             </div>
 
-            <div class="flex items-center justify-end gap-3">
+            <div
+                class="flex flex-col-reverse items-stretch justify-end gap-3 sm:flex-row sm:items-center"
+            >
                 <Link :href="index()">
-                    <Button type="button" variant="outline">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="w-full rounded-xl bg-white/90 sm:w-auto"
+                    >
                         <X class="mr-2 h-4 w-4" />
                         Cancelar
                     </Button>
                 </Link>
-                <Button type="submit" :disabled="form.processing">
+                <Button
+                    type="submit"
+                    :disabled="form.processing"
+                    class="rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-700 px-7 shadow-lg shadow-pink-200 hover:from-pink-700 hover:to-fuchsia-800"
+                >
                     <Save class="mr-2 h-4 w-4" />
                     Guardar Prenda
                 </Button>

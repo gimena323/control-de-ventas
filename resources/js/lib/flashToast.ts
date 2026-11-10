@@ -11,6 +11,27 @@ export function initializeFlashToast(): void {
             return;
         }
 
+        if (
+            data.type === 'success' &&
+            ([
+                'Prenda creada exitosamente.',
+                'Prenda actualizada exitosamente.',
+                'Categoría creada exitosamente.',
+                'Categoría actualizada exitosamente.',
+                'Marca creada exitosamente.',
+                'Marca actualizada exitosamente.',
+                'Talla creada exitosamente.',
+                'Talla actualizada exitosamente.',
+                'Color creado exitosamente.',
+                'Color actualizado exitosamente.',
+            ].includes(data.message) ||
+                /^Usuario .+ (creado|actualizado) exitosamente\.$/.test(
+                    data.message,
+                ))
+        ) {
+            return;
+        }
+
         toast[data.type](data.message);
     });
 }

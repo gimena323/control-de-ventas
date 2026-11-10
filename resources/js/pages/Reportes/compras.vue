@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { BarChart3, FileDown, Printer, Search } from 'lucide-vue-next';
-import { ref } from 'vue';
-import Heading from '@/components/Heading.vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { FileDown, ShoppingCart, TrendingUp } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
+import ManagementHero from '@/components/ManagementHero.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { index } from '@/routes/reportes';
+import { compras, ventas } from '@/routes/reportes';
+import { vistaPdf as comprasVistaPdf } from '@/routes/reportes/compras';
 import type { Categoria, Proveedor } from '@/types';
 
 type DetalleReporte = {
@@ -24,9 +25,20 @@ type DetalleReporte = {
     proveedor: string;
     categoria: string;
     marca: string;
-    modelo: string;
+    genero: string;
     descripcion: string;
     cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+};
+
+type ResumenProducto = {
+    descripcion: string;
+    categoria: string;
+    marca: string;
+    genero: string;
+    cantidad: number;
+    stock: number;
     precio_unitario: number;
     subtotal: number;
 };
@@ -39,6 +51,7 @@ type ResumenProveedor = {
 
 type ReporteCompras = {
     detalles: DetalleReporte[];
+    resumen_producto: ResumenProducto[];
     resumen_proveedor: ResumenProveedor[];
     total_compras: number;
     total_productos: number;
@@ -61,7 +74,7 @@ const props = defineProps<Props>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Reportes', href: index() }],
+        breadcrumbs: [{ title: 'Reporte de Compras', href: compras() }],
     },
 });
 
@@ -72,22 +85,46 @@ const categoriaId = ref(props.filtros.categoria_id ?? '');
 
 function generateReport() {
     const params: Record<string, string> = {};
-    if (fechaInicio.value) params.fecha_inicio = fechaInicio.value;
-    if (fechaFin.value) params.fecha_fin = fechaFin.value;
-    if (proveedorId.value && proveedorId.value !== 'all') params.proveedor_id = proveedorId.value;
-    if (categoriaId.value && categoriaId.value !== 'all') params.categoria_id = categoriaId.value;
 
-    router.get(index(), params, { preserveState: true, replace: true });
+    if (fechaInicio.value) {
+        params.fecha_inicio = fechaInicio.value;
+    }
+
+    if (fechaFin.value) {
+        params.fecha_fin = fechaFin.value;
+    }
+
+    if (proveedorId.value && proveedorId.value !== 'all') {
+        params.proveedor_id = proveedorId.value;
+    }
+
+    if (categoriaId.value && categoriaId.value !== 'all') {
+        params.categoria_id = categoriaId.value;
+    }
+
+    router.get(compras(), params, { preserveState: true, replace: true });
 }
 
 function downloadPdf() {
     const params = new URLSearchParams();
-    if (fechaInicio.value) params.set('fecha_inicio', fechaInicio.value);
-    if (fechaFin.value) params.set('fecha_fin', fechaFin.value);
-    if (proveedorId.value && proveedorId.value !== 'all') params.set('proveedor_id', proveedorId.value);
-    if (categoriaId.value && categoriaId.value !== 'all') params.set('categoria_id', categoriaId.value);
 
-    window.location.href = `/reportes/compras/pdf?${params.toString()}`;
+    if (fechaInicio.value) {
+        params.set('fecha_inicio', fechaInicio.value);
+    }
+
+    if (fechaFin.value) {
+        params.set('fecha_fin', fechaFin.value);
+    }
+
+    if (proveedorId.value && proveedorId.value !== 'all') {
+        params.set('proveedor_id', proveedorId.value);
+    }
+
+    if (categoriaId.value && categoriaId.value !== 'all') {
+        params.set('categoria_id', categoriaId.value);
+    }
+
+    router.visit(comprasVistaPdf({ query: Object.fromEntries(params) }));
 }
 
 function clearFilters() {
@@ -95,49 +132,81 @@ function clearFilters() {
     fechaFin.value = '';
     proveedorId.value = '';
     categoriaId.value = '';
-    generateReport();
 }
+
+watch([fechaInicio, fechaFin, proveedorId, categoriaId], generateReport);
 
 function formatCurrency(value: string | number): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
-    return new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB', minimumFractionDigits: 2 }).format(num);
+
+    return new Intl.NumberFormat('es-BO', {
+        style: 'currency',
+        currency: 'BOB',
+        minimumFractionDigits: 2,
+    }).format(num);
 }
 
-function formatDate(date: string | Date | null): string {
-    if (!date) return '---';
-    const d = new Date(date);
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const year = d.getUTCFullYear();
-    return `${day}-${month}-${year}`;
-}
 </script>
 
 <template>
     <Head title="Reporte de Compras" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-        <div class="flex items-center justify-between">
-            <Heading title="Reporte de Compras" description="Análisis detallado de las compras realizadas." />
-            <Button variant="outline" @click="downloadPdf" :disabled="reporte.detalles.length === 0">
-                <FileDown class="mr-2 h-4 w-4" />
-                Generar PDF
+    <div
+        class="flex h-full flex-1 flex-col gap-6 rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-pink-100 p-4"
+    >
+        <div
+            class="flex flex-wrap items-center gap-2 rounded-2xl border border-pink-100 bg-white/90 p-2 shadow-sm"
+        >
+            <Button
+                as-child
+                class="rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-sm"
+            >
+                <Link :href="compras()"
+                    ><ShoppingCart class="mr-2 h-4 w-4" />Compras</Link
+                >
+            </Button>
+            <Button
+                as-child
+                variant="ghost"
+                class="rounded-xl text-fuchsia-700 hover:bg-fuchsia-50"
+            >
+                <Link :href="ventas()"
+                    ><TrendingUp class="mr-2 h-4 w-4" />Ventas</Link
+                >
             </Button>
         </div>
 
+        <ManagementHero
+            title="Reporte de Compras"
+            description="Análisis detallado de las compras realizadas."
+        >
+            <template #icon><ShoppingCart class="h-7 w-7" /></template>
+            <Button
+                class="bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-md hover:opacity-90"
+                @click="downloadPdf"
+            >
+                <FileDown class="mr-2 h-4 w-4" />
+                Generar PDF
+            </Button>
+        </ManagementHero>
+
         <!-- Filters -->
-        <div class="overflow-hidden rounded-xl border bg-glass">
+        <div
+            class="overflow-hidden rounded-2xl border border-pink-100 bg-white/90 shadow-sm"
+        >
             <div class="border-b px-6 py-4">
                 <h3 class="text-base font-semibold">Filtros de Búsqueda</h3>
             </div>
-            <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-4">
+            <div
+                class="grid grid-cols-1 gap-4 p-6 md:grid-cols-2 xl:grid-cols-4"
+            >
                 <div class="grid gap-2">
                     <Label>Fecha Inicial</Label>
                     <Input type="date" v-model="fechaInicio" />
                 </div>
                 <div class="grid gap-2">
                     <Label>Fecha Final</Label>
-                    <Input type="date" v-model="fechaFin" />
+                    <Input type="date" v-model="fechaFin" :min="fechaInicio" />
                 </div>
                 <div class="grid gap-2">
                     <Label>Proveedor</Label>
@@ -146,8 +215,14 @@ function formatDate(date: string | Date | null): string {
                             <SelectValue placeholder="Todos los proveedores" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los proveedores</SelectItem>
-                            <SelectItem v-for="p in proveedores" :key="p.id" :value="String(p.id)">
+                            <SelectItem value="all"
+                                >Todos los proveedores</SelectItem
+                            >
+                            <SelectItem
+                                v-for="p in proveedores"
+                                :key="p.id"
+                                :value="String(p.id)"
+                            >
                                 {{ p.nombre }}
                             </SelectItem>
                         </SelectContent>
@@ -160,8 +235,14 @@ function formatDate(date: string | Date | null): string {
                             <SelectValue placeholder="Todas las categorías" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas las categorías</SelectItem>
-                            <SelectItem v-for="c in categorias" :key="c.id" :value="String(c.id)">
+                            <SelectItem value="all"
+                                >Todas las categorías</SelectItem
+                            >
+                            <SelectItem
+                                v-for="c in categorias"
+                                :key="c.id"
+                                :value="String(c.id)"
+                            >
                                 {{ c.nombre }}
                             </SelectItem>
                         </SelectContent>
@@ -169,10 +250,6 @@ function formatDate(date: string | Date | null): string {
                 </div>
             </div>
             <div class="flex gap-2 border-t px-6 py-3">
-                <Button @click="generateReport">
-                    <Search class="mr-2 h-4 w-4" />
-                    Generar Reporte
-                </Button>
                 <Button variant="outline" @click="clearFilters">
                     Limpiar Filtros
                 </Button>
@@ -180,107 +257,206 @@ function formatDate(date: string | Date | null): string {
         </div>
 
         <!-- Detail Table -->
-        <div class="overflow-hidden rounded-xl border bg-glass">
-            <div class="border-b px-6 py-4">
-                <h3 class="text-base font-semibold">Detalle Completo de Productos Comprados</h3>
+        <div
+            class="overflow-hidden rounded-2xl border border-pink-100 bg-white/90 shadow-sm"
+        >
+            <div class="border-b px-4 py-3">
+                <h3 class="text-sm font-semibold">
+                    Detalle de Productos Comprados
+                </h3>
             </div>
 
-            <div v-if="reporte.detalles.length > 0">
+            <div v-if="reporte.resumen_producto.length > 0">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="w-full text-xs">
                         <thead>
-                            <tr class="bg-muted/50 border-b text-left">
-                                <th class="px-4 py-3 font-medium">Nro</th>
-                                <th class="px-4 py-3 font-medium">Fecha</th>
-                                <th class="px-4 py-3 font-medium">Proveedor</th>
-                                <th class="px-4 py-3 font-medium">Categoría</th>
-                                <th class="px-4 py-3 font-medium">Marca</th>
-                                <th class="px-4 py-3 font-medium">Modelo</th>
-                                <th class="px-4 py-3 font-medium">Descripción</th>
-                                <th class="px-4 py-3 font-medium text-center">Cantidad</th>
-                                <th class="px-4 py-3 font-medium text-right">P. Unitario</th>
-                                <th class="px-4 py-3 font-medium text-right">Subtotal</th>
+                            <tr class="border-b bg-muted/50 text-left">
+                                <th class="px-2 py-2 font-medium">Nro</th>
+                                <th class="px-2 py-2 font-medium">
+                                    Descripción
+                                </th>
+                                <th class="px-2 py-2 font-medium">Categoría</th>
+                                <th class="px-2 py-2 font-medium">Marca</th>
+                                <th class="px-2 py-2 font-medium">Género</th>
+                                <th class="px-2 py-2 text-center font-medium">
+                                    Cant.
+                                </th>
+                                <th class="px-2 py-2 text-center font-medium">
+                                    Stock
+                                </th>
+                                <th class="px-2 py-2 text-right font-medium">
+                                    P. Unit.
+                                </th>
+                                <th class="px-2 py-2 text-right font-medium">
+                                    Subtotal
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr
-                                v-for="(detalle, index) in reporte.detalles"
-                                :key="`${detalle.compra_id}-${index}`"
-                                class="hover:bg-muted/30 border-b transition-colors last:border-0"
+                                v-for="(
+                                    producto, index
+                                ) in reporte.resumen_producto"
+                                :key="producto.descripcion"
+                                class="border-b transition-colors last:border-0 hover:bg-muted/30"
                             >
-                                <td class="px-4 py-3 text-center">{{ index + 1 }}</td>
-                                <td class="px-4 py-3">{{ formatDate(detalle.fecha) }}</td>
-                                <td class="px-4 py-3 font-medium">{{ detalle.proveedor }}</td>
-                                <td class="px-4 py-3">
-                                    <Badge variant="outline" class="text-xs">{{ detalle.categoria }}</Badge>
+                                <td class="px-2 py-2 text-center">
+                                    {{ index + 1 }}
                                 </td>
-                                <td class="px-4 py-3">{{ detalle.marca }}</td>
-                                <td class="px-4 py-3">{{ detalle.modelo }}</td>
-                                <td class="px-4 py-3 text-xs">{{ detalle.descripcion }}</td>
-                                <td class="px-4 py-3 text-center">{{ detalle.cantidad }}</td>
-                                <td class="px-4 py-3 text-right">{{ formatCurrency(detalle.precio_unitario) }}</td>
-                                <td class="px-4 py-3 text-right font-medium">{{ formatCurrency(detalle.subtotal) }}</td>
+                                <td
+                                    class="max-w-[240px] truncate px-2 py-2 font-medium"
+                                    :title="producto.descripcion"
+                                >
+                                    {{ producto.descripcion }}
+                                </td>
+                                <td class="px-2 py-2">
+                                    <Badge variant="outline" class="text-[10px]">{{
+                                        producto.categoria
+                                    }}</Badge>
+                                </td>
+                                <td class="px-2 py-2">{{ producto.marca }}</td>
+                                <td class="px-2 py-2">
+                                    <Badge variant="outline" class="text-[10px]">{{
+                                        producto.genero === 'femenino'
+                                            ? 'Femenino'
+                                            : producto.genero === 'masculino'
+                                              ? 'Masculino'
+                                              : producto.genero
+                                    }}</Badge>
+                                </td>
+                                <td class="px-2 py-2 text-center font-semibold">
+                                    {{ producto.cantidad }}
+                                </td>
+                                <td class="px-2 py-2 text-center">
+                                    {{ producto.stock }}
+                                </td>
+                                <td class="px-2 py-2 text-right">
+                                    {{
+                                        formatCurrency(producto.precio_unitario)
+                                    }}
+                                </td>
+                                <td class="px-2 py-2 text-right font-medium">
+                                    {{ formatCurrency(producto.subtotal) }}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div v-else class="px-6 py-12 text-center">
-                <BarChart3 class="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-40" />
-                <p class="font-medium text-muted-foreground">No se encontraron compras.</p>
-                <p class="text-muted-foreground text-xs">Intenta ajustar los filtros de búsqueda.</p>
+            <div v-else class="px-6 py-14 text-center">
+                <div
+                    class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink-50"
+                >
+                    <ShoppingCart class="h-7 w-7 text-pink-300" />
+                </div>
+                <p class="text-sm font-medium text-slate-600">
+                    No hay compras registradas para mostrar.
+                </p>
+                <p class="mt-1 text-xs text-slate-400">
+                    Ajusta los filtros de búsqueda o registra nuevas compras.
+                </p>
             </div>
         </div>
 
         <!-- Summary by Supplier -->
-        <div v-if="reporte.resumen_proveedor.length > 0" class="overflow-hidden rounded-xl border bg-glass">
+        <div
+            class="overflow-hidden rounded-2xl border border-pink-100 bg-white/90 shadow-sm"
+        >
             <div class="border-b px-6 py-4">
-                <h3 class="text-base font-semibold">Resumen de Compras por Proveedor</h3>
+                <h3 class="text-base font-semibold">
+                    Resumen de Compras por Proveedor
+                </h3>
             </div>
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-muted/50 border-b text-left">
-                        <th class="px-4 py-3 font-medium">Nro</th>
-                        <th class="px-4 py-3 font-medium">Proveedor</th>
-                        <th class="px-4 py-3 font-medium text-center">Total Productos</th>
-                        <th class="px-4 py-3 font-medium text-right">Total Compra</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="(resumen, index) in reporte.resumen_proveedor"
-                        :key="resumen.proveedor"
-                        class="hover:bg-muted/30 border-b transition-colors last:border-0"
-                    >
-                        <td class="px-4 py-3 text-center">{{ index + 1 }}</td>
-                        <td class="px-4 py-3 font-medium">{{ resumen.proveedor }}</td>
-                        <td class="px-4 py-3 text-center">
-                            <Badge variant="secondary">{{ resumen.total_productos }}</Badge>
-                        </td>
-                        <td class="px-4 py-3 text-right font-bold">{{ formatCurrency(resumen.total_compra) }}</td>
-                    </tr>
-                </tbody>
-            </table>
+
+            <div v-if="reporte.resumen_proveedor.length > 0">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="border-b bg-muted/50 text-left">
+                            <th class="px-2 py-2 font-medium">Nro</th>
+                            <th class="px-2 py-2 font-medium">Proveedor</th>
+                            <th class="px-2 py-2 text-center font-medium">
+                                Total Productos
+                            </th>
+                            <th class="px-2 py-2 text-right font-medium">
+                                Total Compra
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="(
+                                resumen, index
+                            ) in reporte.resumen_proveedor"
+                            :key="resumen.proveedor"
+                            class="border-b transition-colors last:border-0 hover:bg-muted/30"
+                        >
+                            <td class="px-2 py-2 text-center">
+                                {{ index + 1 }}
+                            </td>
+                            <td class="px-2 py-2 font-medium">
+                                {{ resumen.proveedor }}
+                            </td>
+                            <td class="px-2 py-2 text-center">
+                                <Badge variant="secondary">{{
+                                    resumen.total_productos
+                                }}</Badge>
+                            </td>
+                            <td class="px-2 py-2 text-right font-bold">
+                                {{ formatCurrency(resumen.total_compra) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div v-else class="px-6 py-10 text-center">
+                <p class="text-sm text-slate-400">
+                    Sin datos de proveedores para los filtros seleccionados.
+                </p>
+            </div>
         </div>
 
         <!-- Totals -->
-        <div v-if="reporte.detalles.length > 0" class="overflow-hidden rounded-xl border bg-glass">
+        <div
+            class="overflow-hidden rounded-2xl border border-pink-100 bg-white/90 shadow-sm"
+        >
             <div class="border-b px-6 py-4">
                 <h3 class="text-base font-semibold">Totales Generales</h3>
             </div>
             <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
-                <div class="rounded-lg border p-4 text-center">
-                    <p class="text-muted-foreground text-xs">Total de Compras</p>
-                    <p class="text-2xl font-bold">{{ reporte.total_compras }}</p>
+                <div
+                    class="rounded-xl border border-pink-100 bg-gradient-to-br from-pink-50/50 to-white p-5 text-center"
+                >
+                    <p class="text-xs font-medium text-slate-500">
+                        Total de Compras
+                    </p>
+                    <p class="mt-1 text-2xl font-bold text-slate-800">
+                        {{ reporte.total_compras }}
+                    </p>
                 </div>
-                <div class="rounded-lg border p-4 text-center">
-                    <p class="text-muted-foreground text-xs">Total de Productos Comprados</p>
-                    <p class="text-2xl font-bold">{{ reporte.total_productos }} productos</p>
+                <div
+                    class="rounded-xl border border-pink-100 bg-gradient-to-br from-fuchsia-50/50 to-white p-5 text-center"
+                >
+                    <p class="text-xs font-medium text-slate-500">
+                        Total de Productos Comprados
+                    </p>
+                    <p class="mt-1 text-2xl font-bold text-slate-800">
+                        {{ reporte.total_productos }}
+                        <span class="text-sm font-medium text-slate-500"
+                            >productos</span
+                        >
+                    </p>
                 </div>
-                <div class="rounded-lg border p-4 text-center">
-                    <p class="text-muted-foreground text-xs">Monto Total Comprado</p>
-                    <p class="text-2xl font-bold">{{ formatCurrency(reporte.monto_total) }}</p>
+                <div
+                    class="rounded-xl border border-pink-100 bg-gradient-to-br from-rose-50/50 to-white p-5 text-center"
+                >
+                    <p class="text-xs font-medium text-slate-500">
+                        Monto Total Comprado
+                    </p>
+                    <p class="mt-1 text-2xl font-bold text-slate-800">
+                        {{ formatCurrency(reporte.monto_total) }}
+                    </p>
                 </div>
             </div>
         </div>

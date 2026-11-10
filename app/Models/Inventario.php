@@ -12,6 +12,8 @@ class Inventario extends Model
 {
     protected $table = 'inventario';
 
+    protected $appends = ['total_entradas', 'total_salidas'];
+
     protected function casts(): array
     {
         return [
@@ -30,5 +32,15 @@ class Inventario extends Model
     public function movimientos(): HasMany
     {
         return $this->hasMany(InventarioMovimiento::class, 'inventario_id');
+    }
+
+    public function getTotalEntradasAttribute(): int
+    {
+        return $this->movimientos()->withExistingOrigin()->where('tipo', 'entrada')->sum('cantidad');
+    }
+
+    public function getTotalSalidasAttribute(): int
+    {
+        return $this->movimientos()->withExistingOrigin()->where('tipo', 'salida')->sum('cantidad');
     }
 }

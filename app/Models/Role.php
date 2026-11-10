@@ -14,6 +14,8 @@ class Role extends Model
 
     public const ENCARGADO_INVENTARIO = 'encargado_inventario';
 
+    public const CLIENTE = 'cliente';
+
     protected $fillable = [
         'nombre',
         'descripcion',
