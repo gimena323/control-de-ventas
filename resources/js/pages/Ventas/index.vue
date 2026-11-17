@@ -158,6 +158,7 @@ const solicitudError = computed(
 );
 
 const solicitudErrorLocal = ref<string | null>(null);
+const confirmingSolicitudId = ref<number | null>(null);
 const solicitudMensajeError = computed(
     () => solicitudErrorLocal.value ?? solicitudError.value,
 );
@@ -182,11 +183,22 @@ onBeforeUnmount(() => {
 });
 
 function confirmarSolicitud(solicitud: Solicitud) {
+    solicitudErrorLocal.value = null;
+    confirmingSolicitudId.value = solicitud.id;
+
     router.post(
         confirmarSolicitudRoute(solicitud.id).url,
         {},
         {
             preserveScroll: true,
+            onError: (errors) => {
+                solicitudErrorLocal.value =
+                    errors.solicitud ??
+                    'No se pudo confirmar la solicitud de compra.';
+            },
+            onFinish: () => {
+                confirmingSolicitudId.value = null;
+            },
         },
     );
 }
@@ -1004,10 +1016,19 @@ async function printComprobante(): Promise<void> {
                                         "
                                         size="sm"
                                         class="bg-emerald-600 text-white hover:bg-emerald-700"
+                                        :disabled="
+                                            confirmingSolicitudId ===
+                                            solicitud.id
+                                        "
                                         @click="confirmarSolicitud(solicitud)"
                                     >
                                         <Check class="mr-1 h-3.5 w-3.5" />
-                                        Confirmar
+                                        {{
+                                            confirmingSolicitudId ===
+                                            solicitud.id
+                                                ? 'Confirmando...'
+                                                : 'Confirmar'
+                                        }}
                                     </Button>
                                     <Button
                                         v-if="

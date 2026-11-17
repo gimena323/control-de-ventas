@@ -43,8 +43,8 @@ class UsersController extends Controller
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
             'role' => 'required|string|exists:roles,nombre',
-            'telefono' => 'nullable|string|max:20',
-            'fecha_ingreso' => 'nullable|date',
+            'telefono' => ['nullable', 'string', 'max:20', 'regex:/^\d+$/'],
+            'fecha_ingreso' => ['required', 'date_format:Y-m-d', 'date_equals:today'],
             'fecha_fin' => 'nullable|date',
             'status' => 'nullable|string|in:activo,desactivado',
         ]);
@@ -79,8 +79,8 @@ class UsersController extends Controller
             'email' => "required|email|max:255|unique:users,email,{$user->id}",
             'password' => 'nullable|string|min:8',
             'role' => 'required|string|exists:roles,nombre',
-            'telefono' => 'nullable|string|max:20',
-            'fecha_ingreso' => 'nullable|date',
+            'telefono' => ['nullable', 'string', 'max:20', 'regex:/^\d+$/'],
+            'fecha_ingreso' => ['required', 'date_format:Y-m-d', 'date_equals:today'],
             'fecha_fin' => 'nullable|date',
             'status' => 'nullable|string|in:activo,desactivado',
         ]);

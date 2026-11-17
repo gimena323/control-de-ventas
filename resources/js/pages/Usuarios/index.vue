@@ -110,6 +110,14 @@ const form = useForm({
     status: 'activo',
 });
 
+const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/La_Paz',
+});
+
+function onlyDigits(value: string): string {
+    return value.replace(/\D/g, '');
+}
+
 const isEditing = computed(() => !!editingUser.value);
 const dialogTitle = computed(() =>
     isEditing.value ? 'Editar Usuario' : 'Nuevo Usuario',
@@ -124,6 +132,7 @@ function openCreateDialog() {
     editingUser.value = null;
     form.reset();
     form.status = 'activo';
+    form.fecha_ingreso = today;
     formDialogOpen.value = true;
 }
 
@@ -448,7 +457,10 @@ function userRoleBadge(roleName: string): string {
                                 <Input
                                     id="telefono"
                                     v-model="form.telefono"
+                                    inputmode="numeric"
                                     placeholder="+591 71234567"
+                                    maxlength="20"
+                                    @input="form.telefono = onlyDigits(form.telefono)"
                                 />
                                 <InputError :message="form.errors.telefono" />
                             </div>
@@ -459,6 +471,8 @@ function userRoleBadge(roleName: string): string {
                                 <DatePickerInput
                                     id="fecha_ingreso"
                                     v-model="form.fecha_ingreso"
+                                    :min="today"
+                                    :max="today"
                                 />
                                 <InputError
                                     :message="form.errors.fecha_ingreso"

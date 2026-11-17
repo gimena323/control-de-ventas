@@ -47,8 +47,8 @@ class ProveedoresController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:60',
-            'ci_nit' => 'required|string|max:20|unique:proveedores,ci_nit',
-            'telefono' => 'required|string|max:20|unique:proveedores,telefono',
+            'ci_nit' => ['required', 'string', 'max:20', 'regex:/^\d+$/', 'unique:proveedores,ci_nit'],
+            'telefono' => ['required', 'string', 'max:20', 'regex:/^\d+$/', 'unique:proveedores,telefono'],
             'direccion' => 'nullable|string|max:500',
             'email' => 'nullable|email|max:255',
         ]);
@@ -68,8 +68,8 @@ class ProveedoresController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|string|max:60',
-            'ci_nit' => 'required|string|max:20|unique:proveedores,ci_nit,'.$proveedor->id,
-            'telefono' => 'required|string|max:20|unique:proveedores,telefono,'.$proveedor->id,
+            'ci_nit' => ['required', 'string', 'max:20', 'regex:/^\d+$/', 'unique:proveedores,ci_nit,'.$proveedor->id],
+            'telefono' => ['required', 'string', 'max:20', 'regex:/^\d+$/', 'unique:proveedores,telefono,'.$proveedor->id],
             'direccion' => 'nullable|string|max:500',
             'email' => 'nullable|email|max:255',
         ]);

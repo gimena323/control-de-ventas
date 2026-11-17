@@ -101,6 +101,10 @@ const dialogDescription = computed(() =>
 
 const form = computed(() => (isEditing.value ? editForm : createForm));
 
+function onlyDigits(value: string): string {
+    return value.replace(/\D/g, '');
+}
+
 function openCreateDialog() {
     editingProveedor.value = null;
     createForm.reset();
@@ -401,8 +405,10 @@ function submitDelete() {
                             <Input
                                 id="ci_nit"
                                 v-model="form.ci_nit"
+                                inputmode="numeric"
                                 placeholder="CI o NIT del proveedor"
                                 maxlength="20"
+                                @input="form.ci_nit = onlyDigits(form.ci_nit)"
                             />
                         </div>
                         <InputError :message="form.errors.ci_nit" />
@@ -413,8 +419,10 @@ function submitDelete() {
                             <Input
                                 id="telefono"
                                 v-model="form.telefono"
+                                inputmode="numeric"
                                 placeholder="Número de teléfono"
                                 maxlength="20"
+                                @input="form.telefono = onlyDigits(form.telefono)"
                             />
                         </div>
                         <InputError :message="form.errors.telefono" />

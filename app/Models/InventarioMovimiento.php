@@ -42,7 +42,8 @@ class InventarioMovimiento extends Model
                         ->whereExists(function ($query): void {
                             $query->selectRaw('1')
                                 ->from('compras')
-                                ->whereColumn('compras.id', 'inventario_movimientos.origen_id');
+                                ->whereColumn('compras.id', 'inventario_movimientos.origen_id')
+                                ->where('compras.estado', '!=', 'anulada');
                         });
                 })
                 ->orWhere(function (Builder $saleQuery): void {
@@ -66,7 +67,7 @@ class InventarioMovimiento extends Model
                                 ->where('pedidos.estado', '!=', Pedido::ESTADO_CANCELADO);
                         });
                 })
-                ->orWhereNotIn('origen_tipo', ['compra', 'venta', 'anulacion_venta', 'pedido']);
+                ->orWhereNotIn('origen_tipo', ['compra', 'venta', 'anulacion_venta', 'anulacion_compra', 'pedido']);
         });
     }
 }
