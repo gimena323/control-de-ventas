@@ -192,14 +192,16 @@ function scrollBrands(direction: 'left' | 'right'): void {
                         </p>
                     </div>
                 </div>
-                <div class="flex gap-3 overflow-x-auto pb-2">
+                <div
+                    class="grid grid-cols-1 gap-3 pb-2 min-[500px]:grid-cols-2 lg:grid-cols-4"
+                >
                     <Link
                         v-for="categoria in visibleCategories"
                         :key="categoria.id"
                         :href="
                             catalogo({ query: { categoria_id: categoria.id } })
                         "
-                        class="group flex min-w-44 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm transition-all hover:border-pink-200 hover:shadow-md"
+                        class="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm transition-all hover:border-pink-200 hover:shadow-md"
                     >
                         <img
                             v-if="categoryImage(categoria.nombre)"
