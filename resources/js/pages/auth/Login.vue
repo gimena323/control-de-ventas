@@ -44,17 +44,17 @@ defineProps<{
 
     <div class="login-brand mb-3 flex flex-col items-center gap-2">
         <div
-            class="brand-photo size-36 rounded-full border-4 border-fuchsia-500 shadow-[0_0_24px_#d000e988]"
+            class="brand-photo size-36 rounded-full border-4 border-pink-400 shadow-[0_0_24px_#f472b699]"
             role="img"
             aria-label="Logo Emma Fashion"
         ></div>
         <div class="flex items-center gap-2">
             <span
-                class="bg-gradient-to-r from-white via-pink-300 to-fuchsia-500 bg-clip-text text-2xl font-bold text-transparent"
+                class="bg-gradient-to-r from-white via-pink-200 to-fuchsia-300 bg-clip-text text-2xl font-bold text-transparent"
             >
                 Emma Fashion
             </span>
-            <Sparkles class="size-4 text-fuchsia-500" />
+            <Sparkles class="size-4 text-pink-300" />
         </div>
     </div>
 
@@ -64,14 +64,14 @@ defineProps<{
         v-slot="{ errors, processing }"
         class="login-form flex flex-col gap-3"
     >
-        <div class="rounded-2xl border border-indigo-500/70 bg-[#06064d] p-4">
+        <div class="rounded-2xl border border-pink-300/60 bg-[#4a1643] p-4">
             <div class="grid gap-3">
                 <div class="grid gap-2">
                     <Label
                         for="email"
-                        class="flex items-center gap-2 text-sm font-semibold text-violet-100"
+                        class="flex items-center gap-2 text-sm font-semibold text-pink-50"
                     >
-                        <Mail class="size-4 text-rose-500" />
+                        <Mail class="size-4 text-rose-300" />
                         Correo electrónico
                     </Label>
                     <Input
@@ -83,7 +83,7 @@ defineProps<{
                         :tabindex="1"
                         autocomplete="email"
                         placeholder="correo@ejemplo.com"
-                        class="h-11 border-violet-400/40 bg-indigo-900/80 text-violet-50 shadow-sm placeholder:text-indigo-300 focus:border-fuchsia-400 focus:ring-fuchsia-400/30"
+                        class="h-11 border-pink-300/40 bg-fuchsia-950/60 text-white shadow-sm placeholder:text-pink-200/70 focus:border-fuchsia-300 focus:ring-fuchsia-300/30"
                     />
                     <InputError :message="errors.email" />
                 </div>
@@ -92,15 +92,15 @@ defineProps<{
                     <div class="flex items-center justify-between">
                         <Label
                             for="password"
-                            class="flex items-center gap-2 text-sm font-semibold text-violet-100"
+                            class="flex items-center gap-2 text-sm font-semibold text-pink-50"
                         >
-                            <LockKeyhole class="size-4 text-rose-500" />
+                            <LockKeyhole class="size-4 text-rose-300" />
                             Contraseña
                         </Label>
                         <TextLink
                             v-if="canResetPassword"
                             :href="request()"
-                            class="text-sm text-pink-300 decoration-pink-400 hover:text-fuchsia-200"
+                            class="text-sm text-pink-200 decoration-pink-300 hover:text-white"
                             :tabindex="5"
                         >
                             ¿Olvidaste tu contraseña?
@@ -113,7 +113,7 @@ defineProps<{
                         :tabindex="2"
                         autocomplete="current-password"
                         placeholder="••••••••"
-                        class="h-11 border-violet-400/40 bg-indigo-900/80 text-violet-50 shadow-sm placeholder:text-indigo-300 focus:border-fuchsia-400 focus:ring-fuchsia-400/30"
+                        class="h-11 border-pink-300/40 bg-fuchsia-950/60 text-white shadow-sm placeholder:text-pink-200/70 focus:border-fuchsia-300 focus:ring-fuchsia-300/30"
                     />
                     <InputError :message="errors.password" />
                 </div>
@@ -124,15 +124,15 @@ defineProps<{
                             id="remember"
                             name="remember"
                             :tabindex="3"
-                            class="border-violet-300 text-fuchsia-300 focus:ring-fuchsia-400/30 data-[state=checked]:border-fuchsia-400 data-[state=checked]:bg-fuchsia-500"
+                            class="border-pink-200 text-pink-100 focus:ring-fuchsia-300/30 data-[state=checked]:border-pink-300 data-[state=checked]:bg-pink-500"
                         />
-                        <span class="text-sm text-indigo-200">Recordarme</span>
+                        <span class="text-sm text-pink-100">Recordarme</span>
                     </Label>
                 </div>
 
                 <Button
                     type="submit"
-                    class="mt-3 h-11 w-full rounded-xl bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-600 font-semibold text-white shadow-lg shadow-pink-300/50 transition-all duration-200 hover:-translate-y-0.5 hover:from-rose-600 hover:to-violet-700 hover:shadow-xl active:translate-y-0"
+                    class="mt-3 h-11 w-full rounded-xl bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-500 font-semibold text-white shadow-lg shadow-fuchsia-950/30 transition-all duration-200 hover:-translate-y-0.5 hover:from-rose-600 hover:to-violet-600 hover:shadow-xl active:translate-y-0"
                     :tabindex="4"
                     :disabled="processing"
                     data-test="login-button"
@@ -146,14 +146,14 @@ defineProps<{
     </Form>
 
     <div class="my-3 flex items-center gap-3" aria-hidden="true">
-        <span class="h-px flex-1 bg-violet-400/30"></span>
-        <span class="text-xs font-medium text-indigo-300">o continúa con</span>
-        <span class="h-px flex-1 bg-violet-400/30"></span>
+        <span class="h-px flex-1 bg-pink-200/30"></span>
+        <span class="text-xs font-medium text-pink-100">o continúa con</span>
+        <span class="h-px flex-1 bg-pink-200/30"></span>
     </div>
 
     <a
         :href="googleRedirect().url"
-        class="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-violet-400/40 bg-indigo-900/80 px-4 text-sm font-semibold text-violet-100 shadow-sm transition-all hover:-translate-y-0.5 hover:border-fuchsia-400 hover:bg-violet-900 hover:shadow-lg"
+        class="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-pink-300/40 bg-fuchsia-950/60 px-4 text-sm font-semibold text-pink-50 shadow-sm transition-all hover:-translate-y-0.5 hover:border-fuchsia-300 hover:bg-fuchsia-900/70 hover:shadow-lg"
         data-test="google-login-button"
     >
         <svg class="size-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -186,21 +186,21 @@ defineProps<{
 }
 
 .login-form :deep(input:not([type='checkbox'])) {
-    background-color: #141477;
-    color: #f3e8ff;
-    border-color: #5741d5;
+    background-color: #641957;
+    color: #ffffff;
+    border-color: #f9a8d4;
     border-radius: 999px;
 }
 
 .login-form :deep(input:-webkit-autofill) {
-    -webkit-text-fill-color: #f3e8ff;
-    -webkit-box-shadow: 0 0 0 1000px #141477 inset;
+    -webkit-text-fill-color: #ffffff;
+    -webkit-box-shadow: 0 0 0 1000px #641957 inset;
 }
 
 .login-form :deep(button[type='submit']) {
     border-radius: 999px;
-    background: linear-gradient(90deg, #ff2295, #da00ed, #5423ff);
-    box-shadow: 0 0 16px #ce00df55;
+    background: linear-gradient(90deg, #f43f5e, #ec4899, #8b5cf6);
+    box-shadow: 0 0 18px #ec489966;
 }
 
 @media (max-height: 760px) {
